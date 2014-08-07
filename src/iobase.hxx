@@ -1,0 +1,19 @@
+#ifndef __TERMHUB_IOBASE_HXX__
+#define __TERMHUB_IOBASE_HXX__
+
+#include <string>
+#include <memory>
+
+#include "hub.hxx"
+
+namespace TermHub {
+struct Iobase {
+    virtual void inject(const std::string &s) = 0;
+    virtual ~Iobase() {}
+    virtual void start() = 0;
+    virtual void shutdown() = 0;
+};
+
+}  // namespace TermHub
+
+#endif
