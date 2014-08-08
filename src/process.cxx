@@ -44,7 +44,9 @@ Process::Process(boost::asio::io_service& asio, HubPtr h, IoPtr d,
 
 Process::~Process() { LOG("Destructing process"); }
 
-void Process::inject(const std::string& s) {}
+void Process::inject(const std::string& s) {
+    write(in, boost::asio::buffer(s));
+}
 
 void Process::start() {
     read_out();
