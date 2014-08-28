@@ -2,6 +2,7 @@
 #define __TERMHUB_FMT_HXX__
 
 #include <iostream>
+#include <type_traits>
 
 namespace TermHub {
 namespace Fmt {
@@ -67,18 +68,20 @@ std::ostream &operator<<(std::ostream &o, FormatHex<T> s) {
     char *i = buf + 31;
     char *e = buf + 31;
 
-    if (s.t == 0) {
+    typename std::make_unsigned<T>::type val = s.t;
+
+    if (val == 0) {
         *i = '0';
         --i;
     }
 
-    while (s.t) {
-        char v = s.t & 0xf;
+    while (val) {
+        char v = val & 0xf;
         if (v > 9)
             *i = (v - 10) + s.base;
         else
             *i = v + '0';
-        s.t >>= 4;
+        val >>= 4;
         --i;
     }
 
