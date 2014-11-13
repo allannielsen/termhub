@@ -30,10 +30,13 @@ add_executable(termhub src/main.cxx)
 
 add_executable(key-printer src/key-printer.cxx)
 
+install(TARGETS termhub key-printer DESTINATION bin)
+
 target_link_libraries(
     termhub
     th
     keytokenizer
+    ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_LIBRARIES}
 )
 

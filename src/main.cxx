@@ -54,7 +54,9 @@ bool apply_config_file(std::string f) {
 }
 
 int main(int ac, char *av[]) {
+#ifndef NDEBUG
     ::TermHub::log.open("./log.txt");
+#endif
 
     LOG("hello world");
 
@@ -125,8 +127,8 @@ int main(int ac, char *av[]) {
             try {
                 tcp::endpoint ep(boost::asio::ip::tcp::v4(), i);
                 server_auto = Server::create(asio, ep, dut, hub);
-                std::cout << "Listing on " << i << std::endl;
-                LOG("Listing on 0.0.0.0:" << i);
+                std::cout << "Listening on " << i << std::endl;
+                LOG("Listening on 0.0.0.0:" << i);
                 listen_port_number = i;
                 break;
             }

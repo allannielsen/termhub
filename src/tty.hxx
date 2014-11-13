@@ -5,6 +5,7 @@
 #include <boost/asio.hpp>
 
 #include "iobase.hxx"
+#include "process.hxx"
 #include "key-tokenizer.hxx"
 
 namespace TermHub {
@@ -14,9 +15,7 @@ struct Tty;
 typedef std::shared_ptr<Tty> TtyPtr;
 
 struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
-
-    static TtyPtr create(boost::asio::io_service &asio, HubPtr h,
-                                       IoPtr d) {
+    static TtyPtr create(boost::asio::io_service &asio, HubPtr h, IoPtr d) {
         auto tty = TtyPtr(new Tty(asio, h, d));
         tty->init();
         return tty;
@@ -46,21 +45,21 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
     };
 
     struct ActionSpawn : public Action {
-        ActionSpawn(boost::asio::io_service &a, HubPtr h, std::string s)
-                : asio_(a), hub_(h), app_(s) {}
+        ActionSpawn(boost::asio::io_service &a, HubPtr h, std::string s,
+                    TtyPtr t)
+            : tty_(t), asio_(a), hub_(h), app_(s) {}
 
         void exec(TtyPtr tty, IoPtr dut);
 
+        TtyPtr tty_;
         boost::asio::io_service &asio_;
         HubPtr hub_;
         std::string app_;
     };
 
     void action_spawn_completed(int pid, int flags, int status);
-
     void input_disable() { input_disable_ = true; }
     void input_enable() { input_disable_ = false; }
-
 
   private:
     Tty(boost::asio::io_service &asio, HubPtr h, IoPtr d);
@@ -89,6 +88,7 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
     bool shutting_down_ = false;
     bool input_disable_ = false;
 
+    std::shared_ptr<Process> process_;
     std::vector<std::shared_ptr<Action>> actions;
 };
 }  // namespace TermHub

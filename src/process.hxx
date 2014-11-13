@@ -23,6 +23,7 @@ class Process : public Iobase, public std::enable_shared_from_this<Process> {
     void inject(const std::string& s);
     void start();
     void shutdown();
+    void kill();
     int get_id() { return child.get_id(); }
 
   private:

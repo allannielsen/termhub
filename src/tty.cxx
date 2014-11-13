@@ -11,15 +11,16 @@
 namespace TermHub {
 
 Tty::Tty(boost::asio::io_service &asio, HubPtr h, IoPtr d)
-        : dut_(d),
-          hub_(h),
-          asio_(asio),
-          input_(asio_, ::dup(STDIN_FILENO)),
-          output_(asio_, ::dup(STDOUT_FILENO)),
-          key_tokenizer(
+    : dut_(d),
+      hub_(h),
+      asio_(asio),
+      input_(asio_, ::dup(STDIN_FILENO)),
+      output_(asio_, ::dup(STDOUT_FILENO)),
+      key_tokenizer(
               std::bind(&Tty::handle_read_token, this, std::placeholders::_1),
               std::bind(&Tty::handle_read_data, this, std::placeholders::_1,
-                        std::placeholders::_2)) {
+                        std::placeholders::_2)),
+      process_(nullptr) {
     tcgetattr(STDIN_FILENO, &old_tio);
     new_tio = old_tio;
     cfmakeraw(&new_tio);
@@ -60,8 +61,8 @@ bool Tty::tty_cmd_add(const char *&b, const char *e) {
         LOG("TTY-CMD: " << key_ << " -> SPAWN(" << inject_ << ")");
 
         key_tokenizer.key_add(key, actions.size());
-        actions.emplace_back(
-            std::make_shared<ActionSpawn>(asio_, hub_, inject));
+        actions.emplace_back(std::make_shared<ActionSpawn>(asio_, hub_, inject,
+                                                           shared_from_this()));
         return true;
     } else {
         LOG("Did not understand command");
@@ -87,6 +88,7 @@ void Tty::action_spawn_completed(int pid, int flags, int status) {
     else
         std::cout << "\r\n<Pid: " << pid << " exited: " << status << ">\r\n";
 
+    process_.reset();
     input_enable();
 }
 
@@ -94,9 +96,9 @@ void Tty::ActionSpawn::exec(TtyPtr tty, IoPtr dut) {
     tty->input_disable();
     auto x = std::bind(&Tty::action_spawn_completed, tty, std::placeholders::_1,
                        std::placeholders::_2, std::placeholders::_3);
-    auto p = Process::create(asio_, hub_, dut, app_, x);
-
-    std::cout << "\r\n<Spawn: " << app_ << " pid: " << p->get_id() << ">\r\n";
+    tty->process_ = Process::create(asio_, hub_, dut, app_, x);
+    std::cout << "\r\n<Spawn: " << app_ << " pid: " << tty->process_->get_id()
+              << ">\r\n";
 }
 
 bool Tty::tty_cmd_del(const char *&b, const char *e) { return false; }
@@ -158,7 +160,17 @@ void Tty::handle_read(const boost::system::error_code &error, size_t length) {
     }
 
     if (input_disable_) {
-        std::cout << "\r\n<input is suspended!>\r\n";
+        for (size_t i = 0; i < length; ++i) {
+            if (buf_[i] == 3 && process_) {
+                process_->kill();
+            }
+
+            if (process_)
+                std::cout << "\r\n<Input is suspended!>\r\n";
+            else
+                std::cout << "\r\n<Input is suspended while extern process is "
+                             "running! Press ctrl-c to kill it>\r\n";
+        }
     } else {
         // TODO, start timer
         key_tokenizer.put(&buf_[0], length);

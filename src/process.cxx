@@ -1,5 +1,6 @@
 #include "process.hxx"
 #include "log.hxx"
+#include "fmt.hxx"
 
 namespace TermHub {
 
@@ -45,7 +46,9 @@ Process::Process(boost::asio::io_service& asio, HubPtr h, IoPtr d,
 Process::~Process() { LOG("Destructing process"); }
 
 void Process::inject(const std::string& s) {
+    LOG("Process inject: " << Fmt::EscapedString(const_cast<std::string &>(s)));
     write(in, boost::asio::buffer(s));
+    LOG("Process inject - ended");
 }
 
 void Process::start() {
@@ -77,7 +80,10 @@ void Process::shutdown() {
 
     dead_ = true;
     child.terminate(true);
-    child.wait();
+}
+
+void Process::kill() {
+    child.terminate(true);
 }
 
 void Process::handle_read_out(const boost::system::error_code& error,
@@ -91,8 +97,11 @@ void Process::handle_read_out(const boost::system::error_code& error,
         return;
     }
 
-    dut_->inject(std::string(buf_out.begin(), length));
+    std::string s(buf_out.begin(), length);
+    LOG("Process read: " << Fmt::EscapedString(s));
+    dut_->inject(s);
     read_out();
+    LOG("Process read ended");
 }
 
 void Process::handle_read_err(const boost::system::error_code& error,

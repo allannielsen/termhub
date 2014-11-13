@@ -23,16 +23,16 @@ void Rs232Client::shutdown() {
 }
 
 void Rs232Client::start() {
-    LOG("start");
+    LOG("async_read_started");
     auto x = std::bind(&Rs232Client::handle_read, shared_from_this(),
                        std::placeholders::_1, std::placeholders::_2);
     boost::asio::async_read(serial_, boost::asio::buffer(&buf_[0], buf_.size()),
                             boost::asio::transfer_at_least(1), x);
+    LOG("async_read_started-ended");
 }
 
 void Rs232Client::handle_read(const boost::system::error_code &error,
                               size_t length) {
-    LOG("handle_read" << (void *)this);
     if (shutting_down_) return;
 
     if (error) {
@@ -41,12 +41,16 @@ void Rs232Client::handle_read(const boost::system::error_code &error,
     }
 
     std::string s(&buf_[0], length);
+    LOG("handle_read " << (void *)this << " data: " << Fmt::EscapedString(s));
     hub_->post(shared_from_this(), s);
+    LOG("handle_read " << (void *)this << " ended");
     start();
 }
 
 void Rs232Client::inject(const std::string &s) {
-    LOG("tcp-client inject");
+    LOG("rs232-client inject: " << Fmt::EscapedString(
+                                           const_cast<std::string &>(s)));
     write(serial_, boost::asio::buffer(s));
+    LOG("rs232-client inject ended");
 }
 }  // namespace TermHub
