@@ -28,7 +28,7 @@ Tty::Tty(boost::asio::io_service &asio, HubPtr h, IoPtr d)
     assert(res == 0);
 }
 
-Tty::~Tty() { tcsetattr(STDIN_FILENO, TCSANOW, &old_tio); }
+Tty::~Tty() { }
 
 bool Tty::tty_cmd_add(const char *&b, const char *e) {
     LOG("TTY-CMD-ADD: " << std::string(b, e));
@@ -149,6 +149,7 @@ void Tty::shutdown() {
     global_cmd_del("tty-cmd-del");
     shutting_down_ = true;
     input_.close();
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
 }
 
 void Tty::handle_read(const boost::system::error_code &error, size_t length) {
