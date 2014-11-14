@@ -2,7 +2,6 @@
 #define __TERMHUB_FMT_HXX__
 
 #include <iostream>
-#include <type_traits>
 
 namespace TermHub {
 namespace Fmt {

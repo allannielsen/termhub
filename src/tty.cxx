@@ -28,7 +28,7 @@ Tty::Tty(boost::asio::io_service &asio, HubPtr h, IoPtr d)
     assert(res == 0);
 }
 
-Tty::~Tty() { }
+Tty::~Tty() {}
 
 bool Tty::tty_cmd_add(const char *&b, const char *e) {
     LOG("TTY-CMD-ADD: " << std::string(b, e));
@@ -164,13 +164,14 @@ void Tty::handle_read(const boost::system::error_code &error, size_t length) {
         for (size_t i = 0; i < length; ++i) {
             if (buf_[i] == 3 && process_) {
                 process_->kill();
+            } else {
+                if (process_)
+                    std::cout << "\r\n<Input is suspended!>\r\n";
+                else
+                    std::cout << "\r\n<Input is suspended while extern process "
+                                 "is "
+                                 "running! Press ctrl-c to kill it>\r\n";
             }
-
-            if (process_)
-                std::cout << "\r\n<Input is suspended!>\r\n";
-            else
-                std::cout << "\r\n<Input is suspended while extern process is "
-                             "running! Press ctrl-c to kill it>\r\n";
         }
     } else {
         // TODO, start timer

@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <algorithm>
+#include <stdexcept>
 #include "key-tokenizer/inventory.hxx"
 #include "log.hxx"
 
