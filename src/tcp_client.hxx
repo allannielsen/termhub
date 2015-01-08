@@ -41,13 +41,78 @@ struct TcpClient : public Iobase, std::enable_shared_from_this<TcpClient> {
                                 boost::asio::transfer_at_least(1), x);
     }
 
+    void reconnect_timeout() {
+        auto x = std::bind(&TcpClient::handle_reconnect_timeout,
+                           shared_from_this(), std::placeholders::_1);
+        timer_.expires_from_now(boost::posix_time::seconds(1));
+        timer_.async_wait(x);
+    }
+
+    void handle_reconnect_timeout(const boost::system::error_code& e) {
+        bool ok = false;
+        try {
+            connect();
+            ok = true;
+        } catch (...) {
+            ok = false;
+        }
+
+        if (ok) {
+            std::cout << "Reconected :-)\r\n";
+            start();
+            return;
+        } else {
+            reconnect_timeout();
+            return;
+        }
+    }
+
+    void connect() {
+        using boost::asio::ip::tcp;
+
+        tcp::resolver resolver(asio_);
+        boost::asio::connect(socket_, resolver.resolve({host_, port_}));
+
+        struct timeval tv;
+        tv.tv_sec  = 1;
+        tv.tv_usec = 0;
+
+        int fd = socket_.native_handle();
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+
+        boost::asio::socket_base::keep_alive option(true);
+        socket_.set_option(option);
+    }
+
     void handle_read(const boost::system::error_code &error, size_t length) {
         LOG("handle_read" << (void *)this);
         if (shutting_down_) return;
 
         if (error) {
+            std::cout << "\r\nError: " << error.message() << "\r\n";
             LOG("Error: " << error.message());
-            return;
+
+            socket_.cancel();
+            socket_.close();
+
+            bool ok = false;
+            try {
+                connect();
+                ok = true;
+            } catch (...) {
+                ok = false;
+            }
+
+            if (ok) {
+                std::cout << "Reconected :-)\r\n";
+                start();
+                return;
+            } else {
+                std::cout << "Failed to reconnect (will continue to retry)\r\n";
+                reconnect_timeout();
+                return;
+            }
         }
 
         std::string s(&buf_[0], length);
@@ -57,23 +122,29 @@ struct TcpClient : public Iobase, std::enable_shared_from_this<TcpClient> {
 
     void inject(const std::string &s) {
         LOG("tcp-client inject");
-        write(socket_, boost::asio::buffer(s));
+        try {
+            write(socket_, boost::asio::buffer(s));
+        } catch (...) {
+            // dont care
+        }
     }
 
   private:
     TcpClient(boost::asio::io_service &asio, HubPtr h, std::string host,
               std::string port)
-            : hub_(h), socket_(asio) {
-        using boost::asio::ip::tcp;
-        tcp::resolver resolver(asio);
+            : asio_(asio), timer_(asio), hub_(h), socket_(asio), host_(host),
+              port_(port) {
         LOG("tcp-client construct " << (void *)this);
-        boost::asio::connect(socket_, resolver.resolve({host, port}));
+        connect();
     }
 
+    boost::asio::io_service &asio_;
+    boost::asio::deadline_timer timer_;
     HubPtr hub_;
     std::array<char, 32> buf_;
     boost::asio::ip::tcp::socket socket_;
     bool shutting_down_ = false;
+    std::string host_, port_;
 };
 }  // namespace TermHub
 
