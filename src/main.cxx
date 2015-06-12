@@ -1,6 +1,7 @@
 #include <boost/program_options.hpp>
 #include <fstream>
 #include <wordexp.h>
+#include <signal.h>
 #include "dut-dummy-echo.hxx"
 #include "tty.hxx"
 #include "hub.hxx"
@@ -58,6 +59,7 @@ int main(int ac, char *av[]) {
     ::TermHub::log.open("./log.txt");
 #endif
 
+    signal(SIGPIPE, SIG_IGN);
     LOG("hello world");
 
     namespace po = boost::program_options;
@@ -123,7 +125,7 @@ int main(int ac, char *av[]) {
     typedef TcpServer<tcp::endpoint, TcpSession> Server;
     std::shared_ptr<Server> server_auto;
     if (listen_ipv4_auto) {
-        for (int i = 4000; i < 8000; ++i) {
+        for (int i = 4100; i < 8000; ++i) {
             try {
                 tcp::endpoint ep(boost::asio::ip::tcp::v4(), i);
                 server_auto = Server::create(asio, ep, dut, hub);

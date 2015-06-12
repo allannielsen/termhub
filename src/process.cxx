@@ -47,7 +47,9 @@ Process::~Process() { LOG("Destructing process"); }
 
 void Process::inject(const std::string& s) {
     LOG("Process inject: " << Fmt::EscapedString(const_cast<std::string &>(s)));
-    write(in, boost::asio::buffer(s));
+    try {
+        write(in, boost::asio::buffer(s));
+    } catch(...) {}
     LOG("Process inject - ended");
 }
 
