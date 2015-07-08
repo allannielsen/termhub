@@ -8,6 +8,7 @@
 
 namespace TermHub {
 struct Iobase {
+    virtual void send_break() {};
     virtual void inject(const std::string &s) = 0;
     virtual ~Iobase() {}
     virtual void start() = 0;

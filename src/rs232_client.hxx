@@ -27,6 +27,7 @@ struct Rs232Client : public Iobase, std::enable_shared_from_this<Rs232Client> {
 
     void start();
     void shutdown();
+    void send_break();
     void inject(const std::string &s);
     void handle_read(const boost::system::error_code &error, size_t length);
 

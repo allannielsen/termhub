@@ -34,6 +34,7 @@ bool Tty::tty_cmd_add(const char *&b, const char *e) {
     LOG("TTY-CMD-ADD: " << std::string(b, e));
 
     Fmt::Literal quit("quit", true, true);
+    Fmt::Literal send_break("break", true, true);
     Fmt::Literal inject_lit("inject", true, true);
     Fmt::Literal spawn_lit("spawn", true, true);
 
@@ -48,6 +49,13 @@ bool Tty::tty_cmd_add(const char *&b, const char *e) {
 
         key_tokenizer.key_add(key, actions.size());
         actions.emplace_back(std::make_shared<ActionQuit>());
+        return true;
+
+    } else if (parse_group(b, e, key_, send_break) && b == e) {
+        LOG("TTY-CMD: " << key_ << "(" << actions.size() << ") -> BREAK");
+
+        key_tokenizer.key_add(key, actions.size());
+        actions.emplace_back(std::make_shared<ActionBreak>());
         return true;
 
     } else if (parse_group(b, e, key_, inject_lit, inject_)) {
@@ -74,6 +82,11 @@ bool Tty::tty_cmd_add(const char *&b, const char *e) {
 void Tty::ActionQuit::exec(TtyPtr tty, IoPtr dut) {
     LOG("Call signal_exit");
     signal_exit();
+}
+
+void Tty::ActionBreak::exec(TtyPtr tty, IoPtr dut) {
+    LOG("Call break");
+    dut->send_break();
 }
 
 void Tty::ActionInject::exec(TtyPtr tty, IoPtr dut) {

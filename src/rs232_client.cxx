@@ -22,6 +22,11 @@ void Rs232Client::shutdown() {
     serial_.close();
 }
 
+void Rs232Client::send_break() {
+    LOG("break!");
+    serial_.send_break();
+}
+
 void Rs232Client::start() {
     LOG("async_read_started");
     auto x = std::bind(&Rs232Client::handle_read, shared_from_this(),

@@ -36,6 +36,10 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
         void exec(TtyPtr tty, IoPtr dut);
     };
 
+    struct ActionBreak : public Action {
+        void exec(TtyPtr tty, IoPtr dut);
+    };
+
     struct ActionInject : public Action {
         ActionInject(std::string s) : data(s) {}
 
