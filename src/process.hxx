@@ -47,8 +47,8 @@ class Process : public Iobase, public std::enable_shared_from_this<Process> {
     bool error_err = false;
     bool error_out = false;
 
-    std::array<char, 32> buf_out;
-    std::array<char, 32> buf_err;
+    std::array<char, 512> buf_out;
+    std::array<char, 512> buf_err;
     boost::process::child child;
     boost::asio::posix::stream_descriptor in;
     boost::asio::posix::stream_descriptor out;
