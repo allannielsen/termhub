@@ -80,12 +80,13 @@ void Process::shutdown() {
     exiting_ = true;
     if (dead_) return;
 
-    dead_ = true;
     child.terminate(true);
+    clean_up();
 }
 
 void Process::kill() {
     child.terminate(true);
+    clean_up();
 }
 
 void Process::handle_read_out(const boost::system::error_code& error,
