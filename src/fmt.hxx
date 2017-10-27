@@ -132,15 +132,15 @@ std::ostream &operator<<(std::ostream &o, const EscapedString &e);
 
 // PARSE SEQUENCE OF PARSERS ///////////////////////////////////////////////////
 template <typename... Args>
-static bool parse_group_(const char *&b, const char *e, Args &... args);
+inline bool parse_group_(const char *&b, const char *e, Args &... args);
 
 template <>
-bool parse_group_(const char *&b, const char *e) {
+inline bool parse_group_(const char *&b, const char *e) {
     return true;
 }
 
 template <typename Arg, typename... Args>
-static bool parse_group_(const char *&b, const char *e, Arg &arg,
+inline bool parse_group_(const char *&b, const char *e, Arg &arg,
                          Args &... args) {
     if (parse(b, e, arg)) return parse_group_(b, e, args...);
     return false;

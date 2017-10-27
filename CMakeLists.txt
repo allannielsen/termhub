@@ -1,5 +1,12 @@
 cmake_minimum_required (VERSION 2.6)
-project (VCC)
+project (termhub)
+
+string (REPLACE " -" ";-" CXX_FLAGS        "${CMAKE_CXX_FLAGS}")
+LIST(APPEND CXX_FLAGS "-std=c++14")
+LIST(APPEND CXX_FLAGS "-Wall")
+list(REMOVE_DUPLICATES CXX_FLAGS)
+string (REPLACE ";-" " -" CXX_FLAGS        "${CXX_FLAGS}")
+SET(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 
 enable_testing()
 
