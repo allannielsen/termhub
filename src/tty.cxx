@@ -24,8 +24,7 @@ Tty::Tty(boost::asio::io_service &asio, HubPtr h, IoPtr d)
     tcgetattr(STDIN_FILENO, &old_tio);
     new_tio = old_tio;
     cfmakeraw(&new_tio);
-    int res = tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
-    assert(res == 0);
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
 }
 
 Tty::~Tty() {}

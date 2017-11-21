@@ -64,7 +64,13 @@ class TcpSession : public Iobase,
         }
 
         std::string s(&buf_[0], length);
-        dut_->inject(s);
+
+        // Hack... But we need a way to send a break signal - now it is <F12>
+        if (s == std::string("\x1b[24~"))
+            dut_->send_break();
+        else
+            dut_->inject(s);
+
         read();
     }
 

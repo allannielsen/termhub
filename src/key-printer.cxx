@@ -6,16 +6,13 @@
 
 int main(int argc, char *argv[]) {
 #define BUF_SIZE 128
-    int res;
     char c[BUF_SIZE];
     struct termios termios_old, termios_new;
 
-    res = tcgetattr(0, &termios_old);
-    assert(res == 0);
+    tcgetattr(0, &termios_old);
     termios_new = termios_old;
     cfmakeraw(&termios_new);
-    res = tcsetattr(0, TCSANOW, &termios_new);
-    assert(res == 0);
+    tcsetattr(0, TCSANOW, &termios_new);
 
     std::cout << "Press 'q' to exit\r\n";
     while (1) {
