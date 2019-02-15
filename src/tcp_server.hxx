@@ -23,16 +23,18 @@ class TcpSession : public Iobase,
 
     void inject(const std::string& s) {
         LOG("tcp-server inject");
-	try {
+        try {
             write(socket_, boost::asio::buffer(s));
         } catch (const std::exception &e) {
             LOG("Write failed: " << e.what());
-            hub_->disconnect(shared_from_this());
+            dead = true;
+            hub_->disconnect();
 
-	} catch (...) {
+        } catch (...) {
             LOG("Write failed - unknown reason");
-            hub_->disconnect(shared_from_this());
-	}
+            dead = true;
+            hub_->disconnect();
+        }
     }
     void start() { read(); }
 
@@ -59,7 +61,7 @@ class TcpSession : public Iobase,
 
         if (error) {
             LOG("Error: " << error.message());
-            hub_->disconnect(shared_from_this());
+            hub_->disconnect();
             return;
         }
 

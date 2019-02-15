@@ -49,7 +49,9 @@ void Process::inject(const std::string& s) {
     LOG("Process inject: " << Fmt::EscapedString(const_cast<std::string &>(s)));
     try {
         write(in, boost::asio::buffer(s));
-    } catch(...) {}
+    } catch(...) {
+        dead = true;
+    }
     LOG("Process inject - ended");
 }
 
@@ -152,7 +154,7 @@ void Process::clean_up() {
     else
         call_back(child.get_id(), 1, 0);
 
-    hub_->disconnect(shared_from_this());
+    hub_->disconnect();
 }
 }
 

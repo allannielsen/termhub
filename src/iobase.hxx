@@ -13,6 +13,8 @@ struct Iobase {
     virtual ~Iobase() {}
     virtual void start() = 0;
     virtual void shutdown() = 0;
+
+    bool dead = false;
 };
 
 }  // namespace TermHub
