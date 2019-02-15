@@ -9,7 +9,7 @@ list(REMOVE_DUPLICATES CXX_FLAGS)
 string (REPLACE ";-" " -" CXX_FLAGS        "${CXX_FLAGS}")
 SET(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 
-enable_testing()
+#enable_testing()
 
 find_package(Boost COMPONENTS thread program_options system REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -55,4 +55,4 @@ target_link_libraries(
     ${Boost_LIBRARIES}
 )
 
-add_subdirectory(test)
+#add_subdirectory(test)
