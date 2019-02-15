@@ -25,7 +25,7 @@ class TcpSession : public Iobase,
         LOG("tcp-server inject");
 	try {
             write(socket_, boost::asio::buffer(s));
-        } catch (std::exception e) {
+        } catch (const std::exception &e) {
             LOG("Write failed: " << e.what());
             hub_->disconnect(shared_from_this());
 
