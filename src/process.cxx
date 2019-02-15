@@ -102,7 +102,15 @@ void Process::handle_read_out(const boost::system::error_code& error,
 
     std::string s(buf_out.begin(), length);
     LOG("Process read: " << Fmt::EscapedString(s));
-    dut_->inject(s);
+
+    // Hack... But we need a way to send a break signal - now it is <F12>
+    if (s == std::string("\x1b[24~"))
+        dut_->send_break();
+    else if (s.size() < 2 && s[0] == 0xff && s[1] == 0xf3) // telnet break
+        dut_->send_break();
+    else
+        dut_->inject(s);
+
     read_out();
     LOG("Process read ended");
 }
