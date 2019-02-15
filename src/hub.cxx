@@ -13,25 +13,32 @@ std::shared_ptr<Hub> Hub::create() {
 }
 
 void Hub::post(IoPtr peer, const std::string &s) {
-    for (auto i = sinks.begin(); i != sinks.end();) {
-        if (i->expired()) {
-            sinks.erase(i);
-        } else {
-            auto p = i->lock();
-            if (p != peer) p->inject(s);
+    auto i = sinks.begin();
+
+    while (i != sinks.end()) {
+        auto p = i->lock();
+        if (p) {
+            if (p != peer) {
+                p->inject(s);
+            }
             ++i;
+        } else {
+            i = sinks.erase(i);
         }
     }
 }
 
 void Hub::shutdown() {
-    for (auto i = sinks.begin(); i != sinks.end();) {
-        if (i->expired()) {
-            sinks.erase(i);
-        } else {
-            auto p = i->lock();
+    auto i = sinks.begin();
+
+    while (i != sinks.end()) {
+        auto p = i->lock();
+
+        if (p) {
             p->shutdown();
             ++i;
+        } else {
+            i = sinks.erase(i);
         }
     }
 }
@@ -39,15 +46,18 @@ void Hub::shutdown() {
 void Hub::connect(IoPtr c) { sinks.push_back(c); }
 
 void Hub::disconnect(IoPtr c) {
-    for (auto i = sinks.begin(); i != sinks.end();) {
-        if (i->expired()) {
-            sinks.erase(i);
-        } else {
-            auto p = i->lock();
+    auto i = sinks.begin();
+
+    while (i != sinks.end()) {
+        auto p = i->lock();
+
+        if (p) {
             if (p == c)
-                sinks.erase(i);
+                i = sinks.erase(i);
             else
                 ++i;
+        } else {
+            i = sinks.erase(i);
         }
     }
 }
