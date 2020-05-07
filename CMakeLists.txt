@@ -8,6 +8,7 @@ LIST(APPEND CXX_FLAGS "-Wno-unused-result")
 list(REMOVE_DUPLICATES CXX_FLAGS)
 string (REPLACE ";-" " -" CXX_FLAGS        "${CXX_FLAGS}")
 SET(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
+SET(Boost_USE_STATIC_LIBS ON)
 
 #enable_testing()
 
