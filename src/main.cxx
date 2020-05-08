@@ -15,7 +15,7 @@ using namespace TermHub;
 
 namespace TermHub {
 std::ofstream log;
-int listen_port_number = -1;
+unsigned int listen_port_number = 0;
 }  // namespace TermHub
 
 bool apply_config_file(std::string f) {
@@ -69,18 +69,33 @@ int main(int ac, char *av[]) {
     int baudrate = 0;
     std::string device;
     std::string config_file;
-    bool listen_ipv4_auto = true;
     boost::asio::io_service asio;
 
     po::options_description desc("Allowed options");
-    desc.add_options()("help,h", "produce help message")(
-            "config,c", po::value<std::string>(&config_file), "Config file")(
-            "no-listen", "Do not open a TCP server")(
-            "baudrate,b", po::value<int>(&baudrate)->default_value(115200),
-            "Baudrate")(
-            "device,d", po::value<std::string>(&device)->required(),
-            "Device - /dev/rs232-device|(ip-address|hostname):port|dummy");
-
+    desc.add_options()
+            (
+                    "help,h",
+                    "produce help message"
+            ) (
+                    "config,c",
+                    po::value<std::string>(&config_file),
+                    "Config file"
+            ) (
+                    "port,p",
+                    po::value<unsigned int>(&listen_port_number),
+                    "Open a TCP server and listen on port"
+            ) (
+                    "baudrate,b",
+                    po::value<int>(&baudrate)->default_value(115200),
+                    "Baudrate"
+            ) (
+                    "headless",
+                    "Headless/daemon mode - IO not printed locally (only useful along with -p)"
+            ) (
+                    "device,d",
+                    po::value<std::string>(&device)->required(),
+                    "Device - /dev/rs232-device|(ip-address|hostname):port|dummy"
+            );
 
     try {
         po::store(po::parse_command_line(ac, av, desc), vm);
@@ -98,8 +113,6 @@ int main(int ac, char *av[]) {
         std::cout << desc << std::endl;
         return 1;
     }
-
-    if (vm.count("no-listen")) listen_ipv4_auto = false;
 
     HubPtr hub = Hub::create();
 
@@ -119,44 +132,43 @@ int main(int ac, char *av[]) {
     } else if (std::find(device.begin(), device.end(), '/') != device.end()) {
         std::string path(device.begin(), device.end());
         dut = Rs232Client::create(asio, hub, path, baudrate);
-        std::cout << "Connected to " << device << "\r\n";
     }
 
     typedef TcpServer<tcp::endpoint, TcpSession> Server;
     std::shared_ptr<Server> server_auto;
-    if (listen_ipv4_auto) {
-        for (int i = 4100; i < 8000; ++i) {
-            try {
-                tcp::endpoint ep(boost::asio::ip::tcp::v4(), i);
-                server_auto = Server::create(asio, ep, dut, hub);
-                std::cout << "Listening on " << i << std::endl;
-                LOG("Listening on 0.0.0.0:" << i);
-                listen_port_number = i;
-                break;
-            }
-            catch (...) {
-            }
+    if (listen_port_number > 0) {
+        try {
+            tcp::endpoint ep(boost::asio::ip::tcp::v4(), listen_port_number);
+            server_auto = Server::create(asio, ep, dut, hub);
+            std::cout << "Listening on " << listen_port_number << std::endl;
+        } catch (...) {
+            std::cout << "Failed to listen on port " << listen_port_number
+                      << std::endl;
+            exit(-1);
         }
     }
 
-    IoPtr tty = Tty::create(asio, hub, dut);
+    if (vm.count("headless)")) {
+        IoPtr tty = Tty::create(asio, hub, dut);
 
-    bool config_applied = false;
-    if (vm.count("config")) {
-        config_applied = apply_config_file(config_file);
+        bool config_applied = false;
+        if (vm.count("config")) {
+            config_applied = apply_config_file(config_file);
+        }
+
+        if (!config_applied) {
+            config_applied = apply_config_file("~/.termhub");
+        }
+
+        if (!config_applied) {
+            LOG("No configuration file could be read - applying defaults");
+            global_cmd_exec("tty-cmd-add \"\\x1dq\" quit");
+        }
+
+        hub->connect(tty);
+        tty->start();
     }
 
-    if (!config_applied) {
-        config_applied = apply_config_file("~/.termhub");
-    }
-
-    if (!config_applied) {
-        LOG("No configuration file could be read - applying defaults");
-        global_cmd_exec("tty-cmd-add \"\\x1dq\" quit");
-    }
-
-    hub->connect(tty);
-    tty->start();
     asio.run();
 
     return 0;
