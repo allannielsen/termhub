@@ -4,14 +4,15 @@
 
 namespace TermHub {
 extern std::ofstream log;
+extern bool logging_on;
 }  // namespace TermHub
 
-#ifdef NDEBUG
-#define LOG(...)
-#else
 #define LOG(...)                                                               \
-    ::TermHub::log << TermHub::Fmt::LogTemplate(__FILE__, __LINE__)            \
-                   << __VA_ARGS__ << std::endl;                                \
-    ::TermHub::log.flush()
-#endif
+    do {                                                                       \
+        if (::TermHub::logging_on) {                                           \
+            ::TermHub::log << TermHub::Fmt::LogTemplate(__FILE__, __LINE__)    \
+                           << __VA_ARGS__ << std::endl;                        \
+            ::TermHub::log.flush();                                            \
+        }                                                                      \
+    } while(false)
 

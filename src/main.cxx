@@ -18,6 +18,7 @@ using namespace TermHub;
 
 namespace TermHub {
 std::ofstream log;
+bool logging_on = false;
 unsigned int listen_port_number = 0;
 
 struct ConfEntry {
@@ -43,7 +44,7 @@ bool apply_config_file(std::string f) {
     LOG("Reading config file: " << f);
     std::regex r_empty("\\s*");
     std::regex r_comment("\\s*#.*");
-    std::regex r_cmd_args("\\s*(\\w+)\\s*(.*)");
+    std::regex r_cmd_args("\\s*([[:graph:]]+)\\s*(.*)");
 
     wordexp_t exp;
     if (wordexp(f.c_str(), &exp, 0) != 0) {
@@ -104,12 +105,7 @@ void config_overlay(const boost::program_options::variables_map &vm, const char 
 }
 
 int main(int ac, char *av[]) {
-#ifndef NDEBUG
-    ::TermHub::log.open("./log.txt");
-#endif
-
     signal(SIGPIPE, SIG_IGN);
-    LOG("hello world");
 
     namespace po = boost::program_options;
     using boost::asio::ip::tcp;
@@ -120,6 +116,7 @@ int main(int ac, char *av[]) {
     std::string device;
     std::string config_file;
     boost::asio::io_service asio;
+    std::string log_file;
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -130,6 +127,10 @@ int main(int ac, char *av[]) {
                     "config,c",
                     po::value<std::string>(&config_file),
                     "Config file"
+            ) (
+                    "log",
+                    po::value<std::string>(&log_file),
+                    "log file (only for debugging)"
             ) (
                     "port,p",
                     po::value<unsigned int>(&listen_port_number),
@@ -166,6 +167,12 @@ int main(int ac, char *av[]) {
     if (vm.count("help")) {
         std::cout << desc << std::endl;
         return 1;
+    }
+
+    if (log_file.size()) {
+        ::TermHub::log.open(log_file);
+        logging_on = true;
+        LOG("hello log file");
     }
 
     bool has_config = false;
