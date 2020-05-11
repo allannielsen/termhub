@@ -40,6 +40,7 @@ add_executable(termhub src/main.cxx)
 add_executable(key-printer src/key-printer.cxx)
 
 install(TARGETS termhub key-printer DESTINATION bin)
+install(FILES termhub.config DESTINATION etc/termhub COMPONENT config)
 
 target_link_libraries(
     termhub

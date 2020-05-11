@@ -1,7 +1,10 @@
 #include <boost/program_options.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <fstream>
 #include <wordexp.h>
 #include <signal.h>
+#include <vector>
+#include <regex>
 #include "dut-dummy-echo.hxx"
 #include "tty.hxx"
 #include "hub.hxx"
@@ -16,10 +19,31 @@ using namespace TermHub;
 namespace TermHub {
 std::ofstream log;
 unsigned int listen_port_number = 0;
-}  // namespace TermHub
+
+struct ConfEntry {
+    int line;
+    std::string cmd;
+    std::string args;
+    bool processed = false;
+};
+
+std::vector<ConfEntry> conf_db;
+
+ConfEntry* conf_db_get(const std::string &s) {
+    for (auto &e : conf_db) {
+        if (e.cmd == s) {
+            return &e;
+        }
+    }
+
+    return nullptr;
+}
 
 bool apply_config_file(std::string f) {
     LOG("Reading config file: " << f);
+    std::regex r_empty("\\s*");
+    std::regex r_comment("\\s*#.*");
+    std::regex r_cmd_args("\\s*(\\w+)\\s*(.*)");
 
     wordexp_t exp;
     if (wordexp(f.c_str(), &exp, 0) != 0) {
@@ -40,17 +64,42 @@ bool apply_config_file(std::string f) {
     std::ifstream conf(f);
 
     if (!conf.fail()) {
+        int i = 0;
         while (std::getline(conf, line)) {
-            LOG("Conf file line: " << line);
-            if (!global_cmd_exec(line))
-                std::cout << "Error applying: " << line << "\r\n";
+            i ++;
+            std::smatch m;
 
+            if (std::regex_match(line, r_empty)) {
+                // std::cout << "empty line at " << i << std::endl;
+            } else if (std::regex_match(line, r_comment)) {
+                // std::cout << "comment at " << i << std::endl;
+            } else if (std::regex_match(line, m, r_cmd_args) && m.size() == 3) {
+                conf_db.emplace_back(ConfEntry({i, m[1].str(), boost::trim_copy(m[2].str()), false}));
+            } else {
+                std::cout << "Error parsing line " << i << std::endl;
+            }
         }
 
         return true;
     } else {
-        std::cout << "Failed to open file: \"" << f << "\"\r\n";
         return false;
+    }
+}
+
+}  // namespace TermHub
+
+template<typename T>
+void config_overlay(const boost::program_options::variables_map &vm, const char *name, T& dst) {
+    if (vm.count(name) == 0) {
+        auto c = conf_db_get(name);
+        if (c) {
+            try {
+                dst = boost::lexical_cast<T>(c->args);
+                c->processed = true;
+            } catch (...) {
+                std::cout << "Error at line: " << c->line << std::endl;
+            }
+        }
     }
 }
 
@@ -66,6 +115,7 @@ int main(int ac, char *av[]) {
     using boost::asio::ip::tcp;
     po::variables_map vm;
 
+    int headless = 0;
     int baudrate = 0;
     std::string device;
     std::string config_file;
@@ -93,12 +143,16 @@ int main(int ac, char *av[]) {
                     "Headless/daemon mode - IO not printed locally (only useful along with -p)"
             ) (
                     "device,d",
-                    po::value<std::string>(&device)->required(),
+                    po::value<std::string>(&device),
                     "Device - /dev/rs232-device|(ip-address|hostname):port|dummy"
             );
 
+    po::positional_options_description pos;
+    pos.add("device", -1);
+
     try {
-        po::store(po::parse_command_line(ac, av, desc), vm);
+        po::store(po::command_line_parser(ac, av).
+                  options(desc).positional(pos).run(), vm);
         po::notify(vm);
     }
     catch (const std::exception &e) {
@@ -114,11 +168,49 @@ int main(int ac, char *av[]) {
         return 1;
     }
 
+    bool has_config = false;
+    if (vm.count("config")) {
+        has_config = apply_config_file(config_file);
+    }
+
+    if (!has_config) {
+        has_config = apply_config_file("~/.termhub");
+    }
+
+    if (!has_config) {
+        has_config = apply_config_file("/etc/termhub");
+    }
+
+    if (!has_config) {
+        has_config = apply_config_file("/usr/local/etc/termhub");
+    }
+
+    if (!has_config) {
+        std::cout << "No config file applied!" << std::endl;
+    }
+
+    config_overlay(vm, "port", listen_port_number);
+    config_overlay(vm, "baudrate", baudrate);
+    config_overlay(vm, "device", device);
+
+    if (conf_db_get("headless")) {
+        conf_db_get("headless")->processed = true;
+        headless = 1;
+    }
+
+    if (vm.count("headless")) {
+        headless = 1;
+    }
+
     HubPtr hub = Hub::create();
 
     // try to figure out what device type to use
     IoPtr dut;
-    if (device == "dummy") {
+    if (device.size() == 0) {
+        std::cout << "No device specified!" << std::endl;
+        exit(-1);
+
+    } else if (device == "dummy") {
         dut = DutDummyEcho::create(hub);
         std::cout << "Connected to dummy echo-device\r\n";
 
@@ -130,8 +222,13 @@ int main(int ac, char *av[]) {
         std::cout << "Connected to " << device << "\r\n";
 
     } else if (std::find(device.begin(), device.end(), '/') != device.end()) {
+        std::cout << "Device at " << device << "\r\n";
         std::string path(device.begin(), device.end());
         dut = Rs232Client::create(asio, hub, path, baudrate);
+
+    } else {
+        std::cout << "Device: " << device << " not understood" << std::endl;
+        exit(-1);
     }
 
     typedef TcpServer<tcp::endpoint, TcpSession> Server;
@@ -148,21 +245,23 @@ int main(int ac, char *av[]) {
         }
     }
 
-    if (vm.count("headless)")) {
+    if (headless) {
+        std::cout << "Running in headless mode" << std::endl;
+
+    } else {
         IoPtr tty = Tty::create(asio, hub, dut);
 
-        bool config_applied = false;
-        if (vm.count("config")) {
-            config_applied = apply_config_file(config_file);
-        }
+        if (has_config) {
+            for (auto &e : conf_db) {
+                if (e.processed)
+                    continue;
 
-        if (!config_applied) {
-            config_applied = apply_config_file("~/.termhub");
-        }
-
-        if (!config_applied) {
+                if (global_cmd_exec(e.cmd, e.args))
+                    e.processed = true;
+            }
+        } else {
             LOG("No configuration file could be read - applying defaults");
-            global_cmd_exec("tty-cmd-add \"\\x1dq\" quit");
+            global_cmd_exec("tty-cmd-add", "\"\\x1dq\" quit");
         }
 
         hub->connect(tty);

@@ -13,7 +13,7 @@ struct CmdRegistry {
     bool cmd_add(const std::string &name, cmd_t c);
     bool cmd_del(const std::string &name);
 
-    bool exec(const char *&b, const char *e);
+    bool exec(const std::string &cmd, const std::string &args);
 
   private:
     std::map<std::string, cmd_t> registry;
@@ -21,7 +21,7 @@ struct CmdRegistry {
 
 bool global_cmd_add(std::string name, CmdRegistry::cmd_t c);
 bool global_cmd_del(std::string name);
-bool global_cmd_exec(const std::string &name);
+bool global_cmd_exec(const std::string &cmd, const std::string &args);
 }
 
 #endif  // __TERMHUB_CMD_REGISTRY__

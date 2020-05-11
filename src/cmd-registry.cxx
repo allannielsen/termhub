@@ -14,10 +14,8 @@ bool global_cmd_del(std::string name) {
     return global_cmd_registry.cmd_del(name);
 }
 
-bool global_cmd_exec(const std::string &input) {
-    const char *b = input.c_str();
-    const char *e = b + input.size();
-    return global_cmd_registry.exec(b, e);
+bool global_cmd_exec(const std::string &c, const std::string &a) {
+    return global_cmd_registry.exec(c, a);
 }
 
 bool CmdRegistry::cmd_add(const std::string &name, cmd_t c) {
@@ -45,27 +43,16 @@ bool CmdRegistry::cmd_del(const std::string &name) {
     return true;
 }
 
-bool CmdRegistry::exec(const char *&b, const char *e) {
-    std::string cmd;
-    Fmt::Word cmd_w(cmd);
-
-    if (b == e)
-        return true;
-
-    if (*b == '#')
-        return true;
-
-    if (!parse(b, e, cmd_w)) {
-        // silent ignore...
-        return true;
-    }
-
+bool CmdRegistry::exec(const std::string &cmd, const std::string &args) {
     auto i = registry.find(cmd);
     if (i == registry.end()) {
         LOG("No such command: \"" << cmd << "\"");
         std::cout << "No such command: " << cmd << "\r\n";
         return false;
     }
+
+    const char *b = args.c_str();
+    const char *e = b + args.size();
 
     // call delegate
     return i->second(b, e);
