@@ -5,6 +5,8 @@
 #include <signal.h>
 #include <vector>
 #include <regex>
+#include <iomanip>
+#include <sstream>
 #include "dut-dummy-echo.hxx"
 #include "tty.hxx"
 #include "hub.hxx"
@@ -20,6 +22,7 @@ namespace TermHub {
 std::ofstream log;
 bool logging_on = false;
 unsigned int listen_port_number = 0;
+static std::chrono::time_point<std::chrono::system_clock> start_time;
 
 struct ConfEntry {
     int line;
@@ -87,6 +90,15 @@ bool apply_config_file(std::string f) {
     }
 }
 
+std::string log_time_stamp() {
+    std::stringstream ss;
+    std::chrono::duration<long int, std::milli> diff =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now() - start_time);
+    ss << std::setw(10) << diff.count() << " ";
+    return ss.str();
+}
+
 }  // namespace TermHub
 
 template<typename T>
@@ -106,6 +118,7 @@ void config_overlay(const boost::program_options::variables_map &vm, const char 
 
 int main(int ac, char *av[]) {
     signal(SIGPIPE, SIG_IGN);
+    start_time = std::chrono::system_clock::now();
 
     namespace po = boost::program_options;
     using boost::asio::ip::tcp;

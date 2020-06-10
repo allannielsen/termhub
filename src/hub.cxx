@@ -32,22 +32,22 @@ void Hub::post(IoPtr peer, const std::string &s) {
     DisconnectPostpone dis(this);
     auto i = sinks.begin();
 
-    LOG("post size: " << sinks.size() << " " << disconnect_not_now);
+    LOG("post: " << sinks.size() << " " << disconnect_not_now << " DATA: >" << s << "<");
     while (i != sinks.end()) {
         auto p = i->lock();
         if (p) {
             if (p != peer) {
-                LOG("post-inject");
+                //LOG("post-inject");
                 p->inject(s);
             }
             ++i;
         } else {
-            LOG("post-ease");
+            //LOG("post-ease");
             i = sinks.erase(i);
         }
     }
 
-    LOG("post done");
+    //LOG("post done");
 }
 
 void Hub::shutdown() {
@@ -72,14 +72,14 @@ void Hub::connect(IoPtr c) {
 }
 
 void Hub::disconnect() {
-    LOG("disconnect cnt: " << disconnect_not_now);
+    //LOG("disconnect cnt: " << disconnect_not_now);
 
     if (disconnect_not_now) {
-        LOG("disconnect postponed");
+        //LOG("disconnect postponed");
         return;
     }
 
-    LOG("do disconnect");
+    //LOG("do disconnect");
     auto i = sinks.begin();
 
     while (i != sinks.end()) {
@@ -87,7 +87,7 @@ void Hub::disconnect() {
 
         if (!p || p->dead) {
             i = sinks.erase(i);
-            LOG("disconnect delete");
+            //LOG("disconnect delete");
         } else {
             ++i;
         }
