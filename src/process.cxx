@@ -12,6 +12,7 @@ std::shared_ptr<Process> Process::create(boost::asio::io_service& asio,
     ctx.stdin_behavior = boost::process::capture_stream();
     ctx.stdout_behavior = boost::process::capture_stream();
     ctx.stderr_behavior = boost::process::capture_stream();
+    ctx.environment = boost::process::self::get_environment();
     if (listen_port_number != -1)
         ctx.environment.emplace("TERMHUB_PORT",
                                 std::to_string(listen_port_number));
