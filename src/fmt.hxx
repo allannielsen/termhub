@@ -2,6 +2,7 @@
 #define __TERMHUB_FMT_HXX__
 
 #include <iostream>
+#include <cstdint>
 
 namespace TermHub {
 namespace Fmt {

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <cstdint>
 #include "fmt.hxx"
 
 namespace TermHub {
