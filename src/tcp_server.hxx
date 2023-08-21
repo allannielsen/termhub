@@ -65,6 +65,7 @@ class TcpSession : public Iobase,
         if (error) {
             LOG("tcp-session(" << (void *)this << "): Error (disconnect): "
                 << error.message());
+            dead = true;
             hub_->disconnect();
             return;
         }
