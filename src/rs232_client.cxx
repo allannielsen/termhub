@@ -31,7 +31,11 @@ void Rs232Client::shutdown() {
 
 void Rs232Client::send_break() {
     LOG("rs232(" << (void *)this << "): break");
-    serial_.send_break();
+    try {
+        serial_.send_break();
+    } catch(...) {
+        LOG("rs232(" << (void *)this << "): break-unknown error...");
+    }
 }
 
 void Rs232Client::start() {
