@@ -6,7 +6,7 @@ namespace TermHub {
 Rs232Client::Rs232Client(boost::asio::io_service &asio, HubPtr h,
                          std::string path, int baudrate)
     : hub_(h), serial_(asio), path_(path), baudrate_(baudrate), timer_(asio) {
-    LOG("rs232 client construct " << (void *)this);
+    LOG("rs232(" << (void *)this << "): construct");
 }
 
 void Rs232Client::open_and_start() {
@@ -24,23 +24,23 @@ void Rs232Client::open_and_start() {
 }
 
 void Rs232Client::shutdown() {
-    LOG("Shutting down Rs232Client");
+    LOG("rs232(" << (void *)this << "): shutdown");
     shutting_down_ = true;
     serial_.close();
 }
 
 void Rs232Client::send_break() {
-    LOG("break!");
+    LOG("rs232(" << (void *)this << "): break");
     serial_.send_break();
 }
 
 void Rs232Client::start() {
-    LOG("async_read_started");
+    LOG("rs232(" << (void *)this << "): async_read_started");
     auto x = std::bind(&Rs232Client::handle_read, shared_from_this(),
                        std::placeholders::_1, std::placeholders::_2);
     boost::asio::async_read(serial_, boost::asio::buffer(&buf_[0], buf_.size()),
                             boost::asio::transfer_at_least(1), x);
-    LOG("async_read_started-ended");
+    LOG("rs232(" << (void *)this << "): async_read_started-ended");
 }
 
 void Rs232Client::handle_read(const boost::system::error_code &error,
@@ -49,38 +49,43 @@ void Rs232Client::handle_read(const boost::system::error_code &error,
 
     if (error) {
         boost::system::error_code e;
-        LOG("Error: " << error.message());
+        LOG("rs232(" << (void *)this << "): Error: " << error.message());
         reconnect_timeout();
         return;
     }
 
     std::string s(&buf_[0], length);
-    LOG("handle_read " << (void *)this << " data: " << Fmt::EscapedString(s));
+    LOG("rs232(" << (void *)this << "): handle_read data: " << Fmt::EscapedString(s));
     hub_->post(shared_from_this(), s);
-    LOG("handle_read " << (void *)this << " ended");
+    LOG("rs232(" << (void *)this << "): handle_read ended");
     start();
 }
 
 void Rs232Client::inject(const std::string &s) {
-    LOG("rs232-client inject: " << Fmt::EscapedString(
+    LOG("rs232(" << (void *)this << "): inject: " << Fmt::EscapedString(
                                            const_cast<std::string &>(s)));
     try {
         write(serial_, boost::asio::buffer(s));
     } catch (...) { // TODO, print error
+        LOG("rs232(" << (void *)this << "): inject error");
         reconnect_timeout();
     }
-    LOG("rs232-client inject ended");
+    LOG("rs232(" << (void *)this << "): inject ended");
 }
 
 void Rs232Client::reconnect_timeout() {
     if (shutting_down_) return;
 
     if (!sleeping_) {
+        LOG("rs232(" << (void *)this << "): async_sleep");
         auto x = std::bind(&Rs232Client::handle_reconnect_timeout,
                            shared_from_this(), std::placeholders::_1);
         timer_.expires_from_now(boost::posix_time::milliseconds(100));
         timer_.async_wait(x);
         sleeping_ = true;
+        LOG("rs232(" << (void *)this << "): async_sleep - exit");
+    } else {
+        LOG("rs232(" << (void *)this << "): already sleeping...");
     }
 }
 

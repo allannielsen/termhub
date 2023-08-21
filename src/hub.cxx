@@ -72,14 +72,14 @@ void Hub::connect(IoPtr c) {
 }
 
 void Hub::disconnect() {
-    //LOG("disconnect cnt: " << disconnect_not_now);
+    LOG("hub: disconnect cnt: " << disconnect_not_now);
 
     if (disconnect_not_now) {
-        //LOG("disconnect postponed");
+        LOG("hub: disconnect postponed");
         return;
     }
 
-    //LOG("do disconnect");
+    LOG("hub: do disconnect");
     auto i = sinks.begin();
 
     while (i != sinks.end()) {
@@ -87,7 +87,7 @@ void Hub::disconnect() {
 
         if (!p || p->dead) {
             i = sinks.erase(i);
-            //LOG("disconnect delete");
+            LOG("hub: disconnect delete");
         } else {
             ++i;
         }

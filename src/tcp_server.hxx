@@ -22,16 +22,18 @@ class TcpSession : public Iobase,
     boost::asio::ip::tcp::socket& socket() { return socket_; }
 
     void inject(const std::string& s) {
-        LOG("tcp-server inject");
+        LOG("tcp-session(" << (void *)this << "): inject");
         try {
             write(socket_, boost::asio::buffer(s));
         } catch (const std::exception &e) {
-            LOG("Write failed: " << e.what());
+            LOG("tcp-session(" << (void *)this << "): Write failed: "
+                << e.what());
             dead = true;
             hub_->disconnect();
 
         } catch (...) {
-            LOG("Write failed - unknown reason");
+            LOG("tcp-session(" << (void *)this
+                << "): Write failed - unknown reason");
             dead = true;
             hub_->disconnect();
         }
@@ -54,13 +56,15 @@ class TcpSession : public Iobase,
         boost::asio::async_read(socket_,
                                 boost::asio::buffer(&buf_[0], buf_.size()),
                                 boost::asio::transfer_at_least(1), x);
+        LOG("tcp-session(" << (void *)this << "): async read");
     }
 
     void handle_read(const boost::system::error_code& error, size_t length) {
         if (shutting_down_) return;
 
         if (error) {
-            LOG("Error: " << error.message());
+            LOG("tcp-session(" << (void *)this << "): Error (disconnect): "
+                << error.message());
             hub_->disconnect();
             return;
         }
@@ -99,7 +103,7 @@ struct TcpServer
     }
 
     void shutdown() {
-        LOG("Shutting down TcpServer");
+        LOG("tcp-server: Shutting down TcpServer");
         shutting_down_ = true;
         acceptor_.cancel();
         acceptor_.close();
@@ -121,6 +125,7 @@ struct TcpServer
         acceptor_.async_accept(new_session->socket(),
                                std::bind(&TcpServer::handle_accept, this,
                                          new_session, std::placeholders::_1));
+        LOG("tcp-server: async accept");
     }
 
     void handle_accept(std::shared_ptr<Session> new_session,
@@ -128,11 +133,11 @@ struct TcpServer
         if (shutting_down_) return;
 
         if (error) {
-            LOG("Error: " << error.message());
+            LOG("tcp-server: Error: " << error.message());
             return;
         }
 
-        LOG("Accept");
+        LOG("tcp-server: Accept new session: " << (void *)new_session.get());
         hub_->connect(new_session);
         new_session->start();
         start_accept();
