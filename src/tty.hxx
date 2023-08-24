@@ -6,6 +6,7 @@
 
 #include "iobase.hxx"
 #include "process.hxx"
+#include "ringbuf.hxx"
 #include "key-tokenizer.hxx"
 
 namespace TermHub {
@@ -24,7 +25,7 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
     ~Tty();
 
     void start();
-    void inject(const std::string &s);
+    void inject(const char *p, size_t l);
     void shutdown();
 
 
@@ -65,6 +66,10 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
     void input_disable() { input_disable_ = true; }
     void input_enable() { input_disable_ = false; }
 
+    void write_start();
+    void write_completion(const boost::system::error_code &error,
+                                       size_t length);
+
   private:
     Tty(boost::asio::io_service &asio, HubPtr h, IoPtr d);
     void init();
@@ -77,6 +82,7 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
     bool tty_cmd_del(const char *&b, const char *e);
 
     typedef std::array<char, 32> Buf;
+    RingBuf<4096> tx_buf_;
     typedef Buf::iterator BufItr;
 
     Buf buf_;
@@ -89,6 +95,7 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
 
     KeyTokenizer::Inventory key_tokenizer;
 
+    size_t write_in_progress_ = 0;
     bool shutting_down_ = false;
     bool input_disable_ = false;
 

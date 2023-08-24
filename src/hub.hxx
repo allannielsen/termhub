@@ -15,7 +15,7 @@ struct Hub {
     friend class DisconnectPostpone;
 
     static std::shared_ptr<Hub> create();
-    void post(IoPtr peer, const std::string &s);
+    void post(IoPtr peer, const char *data, size_t l);
 
     void shutdown();
     void connect(IoPtr c);

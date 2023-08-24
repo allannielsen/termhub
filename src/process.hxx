@@ -7,6 +7,7 @@
 
 #include "log.hxx"
 #include "iobase.hxx"
+#include "ringbuf.hxx"
 #include "signal_exit.hxx"
 
 namespace TermHub {
@@ -20,7 +21,7 @@ class Process : public Iobase, public std::enable_shared_from_this<Process> {
 
     ~Process();
 
-    void inject(const std::string& s);
+    void inject(const char *p, size_t l);
     void start();
     void shutdown();
     void kill();
@@ -39,6 +40,10 @@ class Process : public Iobase, public std::enable_shared_from_this<Process> {
     void handle_read_err(const boost::system::error_code& error,
                          std::size_t length);
 
+    void write_start();
+    void write_completion(const boost::system::error_code &error,
+                                       size_t length);
+
 
     IoPtr dut_;
     HubPtr hub_;
@@ -46,9 +51,11 @@ class Process : public Iobase, public std::enable_shared_from_this<Process> {
     bool exiting_ = false;
     bool error_err = false;
     bool error_out = false;
+    size_t write_in_progress_ = 0;
 
-    std::array<char, 512> buf_out;
-    std::array<char, 512> buf_err;
+    std::array<char, 4096> buf_out;
+    std::array<char, 4096> buf_err;
+    RingBuf<4096> tx_buf_;
     boost::process::child child;
     boost::asio::posix::stream_descriptor in;
     boost::asio::posix::stream_descriptor out;

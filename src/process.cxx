@@ -46,15 +46,44 @@ Process::Process(boost::asio::io_service& asio, HubPtr h, IoPtr d,
 
 Process::~Process() { LOG("Destructing process"); }
 
-void Process::inject(const std::string& s) {
-    LOG("Process inject: " << Fmt::EscapedString(const_cast<std::string &>(s)));
-    try {
-        write(in, boost::asio::buffer(s));
-    } catch(...) {
-        dead = true;
-    }
-    LOG("Process inject - ended");
+void Process::inject(const char *p, size_t l) {
+    tx_buf_.push(p, l);
+    write_start();
 }
+
+void Process::write_start() {
+    if (write_in_progress_) {
+        return;
+    }
+
+    size_t length = 0;
+    const char *data = tx_buf_.get_data_buf(&length);
+    if (length == 0) {
+        return;
+    }
+
+    write_in_progress_ = true;
+    auto x = std::bind(&Process::write_completion, shared_from_this(),
+                       std::placeholders::_1, std::placeholders::_2);
+    boost::asio::async_write(in, boost::asio::buffer(data, length),
+                             boost::asio::transfer_at_least(1), x);
+}
+
+void Process::write_completion(const boost::system::error_code &error,
+                           size_t length) {
+    write_in_progress_ = false;
+
+    if (error) {
+        boost::system::error_code e;
+        std::cout << "Write error, clearning socket!\r\n";
+        tx_buf_.clear();
+        return;
+    }
+
+    tx_buf_.consume(length);
+    write_start();
+}
+
 
 void Process::start() {
     read_out();
@@ -112,7 +141,7 @@ void Process::handle_read_out(const boost::system::error_code& error,
     else if (s.size() < 2 && s[0] == 0xff && s[1] == 0xf3) // telnet break
         dut_->send_break();
     else
-        dut_->inject(s);
+        dut_->inject(buf_out.begin(), length);
 
     read_out();
     LOG("Process read ended");

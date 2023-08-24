@@ -17,15 +17,15 @@ struct DutDummyEcho : public Iobase,
 
     void start() {}
 
-    void inject(const std::string &s) {
+    void inject(const char *c, size_t s) {
         std::string res;
-        for (auto c : s) {
-            if (c == '\r')
+        for (size_t i = 0; i < s; ++i, ++c) {
+            if (*c == '\r')
                 res.append("\r\n");
             else
-                res.push_back(c);
+                res.push_back(*c);
         }
-        hub_->post(shared_from_this(), res);
+        hub_->post(shared_from_this(), res.c_str(), res.size());
     }
 
     void shutdown() {}

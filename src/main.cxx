@@ -99,6 +99,39 @@ std::string log_time_stamp() {
     return ss.str();
 }
 
+class SignalHandler {
+  public:
+    Rs232Client(boost::asio::io_service &asio, HubPtr h) : hub_(h), signals(asio, SIGINT, SIGTERM) {
+        auto x = std::bind(&SignalHandler::handle_read, shared_from_this(),
+                           std::placeholders::_1, std::placeholders::_2);
+
+        signals.async_wait(handler);
+    }
+
+    handler(const boost::system::error_code& error, int signal_number) {
+    }
+
+    boost::asio::signal_set signals;
+};
+
+struct SignalHandler : public Iobase, std::enable_shared_from_this<SignalHandler> {
+    static IoPtr create(boost::asio::io_service &asio, HubPtr h) {
+        std::shared_ptr<SignalHandler> p(
+                new SignalHandler(asio, h));
+        return p;
+    }
+
+    void inject(const char *p, size_t l) { }
+
+  private:
+    SignalHandler(boost::asio::io_service &asio, HubPtr h, std::string path,
+                int baudrate);
+
+    HubPtr hub_;
+    boost::asio::signal_set signals;
+};
+
+
 }  // namespace TermHub
 
 template<typename T>

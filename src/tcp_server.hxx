@@ -7,6 +7,7 @@
 #include "log.hxx"
 #include "iobase.hxx"
 #include "signal_exit.hxx"
+#include "ringbuf.hxx"
 
 namespace TermHub {
 class TcpSession : public Iobase,
@@ -21,22 +22,47 @@ class TcpSession : public Iobase,
 
     boost::asio::ip::tcp::socket& socket() { return socket_; }
 
-    void inject(const std::string& s) {
-        LOG("tcp-session(" << (void *)this << "): inject");
-        try {
-            write(socket_, boost::asio::buffer(s));
-        } catch (const std::exception &e) {
-            LOG("tcp-session(" << (void *)this << "): Write failed: "
-                << e.what());
-            dead = true;
-            hub_->disconnect();
-
-        } catch (...) {
-            LOG("tcp-session(" << (void *)this
-                << "): Write failed - unknown reason");
-            dead = true;
-            hub_->disconnect();
+    void write_start() {
+        if (write_in_progress_ || shutting_down_) {
+            return;
         }
+
+        size_t length = 0;
+        tx_data = tx_buf_.get_data_buf(&length);
+        if (length == 0) {
+            return;
+        }
+
+        write_in_progress_ = true;
+        auto x = std::bind(&TcpSession::write_completion, shared_from_this(),
+                           std::placeholders::_1, std::placeholders::_2);
+        boost::asio::async_write(socket_, boost::asio::buffer(tx_data, length),
+                                 boost::asio::transfer_at_least(1), x);
+    }
+
+    void write_completion(const boost::system::error_code &error,
+                                       size_t length) {
+        write_in_progress_ = false;
+        if (shutting_down_ || dead) return;
+
+        if (error) {
+            boost::system::error_code e;
+            LOG("tcp-session(" << (void *)this << "): Write-Error: "
+                               << error.message());
+            dead = true;
+            hub_->disconnect();
+            tx_buf_.clear();
+            return;
+        }
+
+        LOG("rs232(" << (void *)this << "): write_completion data: " << length);
+        tx_buf_.consume(length);
+        write_start();
+    }
+
+    void inject(const char *p, size_t l) {
+        tx_buf_.push(p, l);
+        write_start();
     }
     void start() { read(); }
 
@@ -54,13 +80,13 @@ class TcpSession : public Iobase,
         auto x = std::bind(&TcpSession::handle_read, shared_from_this(),
                            std::placeholders::_1, std::placeholders::_2);
         boost::asio::async_read(socket_,
-                                boost::asio::buffer(&buf_[0], buf_.size()),
+                                boost::asio::buffer(&rx_buf_[0], rx_buf_.size()),
                                 boost::asio::transfer_at_least(1), x);
         LOG("tcp-session(" << (void *)this << "): async read");
     }
 
     void handle_read(const boost::system::error_code& error, size_t length) {
-        if (shutting_down_) return;
+        if (shutting_down_ || dead) return;
 
         if (error) {
             LOG("tcp-session(" << (void *)this << "): Error (disconnect): "
@@ -70,22 +96,26 @@ class TcpSession : public Iobase,
             return;
         }
 
-        std::string s(&buf_[0], length);
+        std::string s(&rx_buf_[0], length);
 
         // Hack... But we need a way to send a break signal - now it is <F12>
-        if (s == std::string("\x1b[24~"))
+        if (s == std::string("\x1b[24~")) {
             dut_->send_break();
-        else
-            dut_->inject(s);
+        } else {
+            dut_->inject(&rx_buf_[0], length);
+        }
 
         read();
     }
 
     IoPtr dut_;
     HubPtr hub_;
-    std::array<char, 32> buf_;
+    std::array<char, 32> rx_buf_;
+    RingBuf<102400> tx_buf_;
     boost::asio::ip::tcp::socket socket_;
     bool shutting_down_ = false;
+    bool write_in_progress_ = false;
+    const char *tx_data;
 };
 
 template <typename EndPoint, typename Session>

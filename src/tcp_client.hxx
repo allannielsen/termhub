@@ -116,17 +116,47 @@ struct TcpClient : public Iobase, std::enable_shared_from_this<TcpClient> {
         }
 
         std::string s(&buf_[0], length);
-        hub_->post(shared_from_this(), s);
+        hub_->post(shared_from_this(), &buf_[0], length);
         start();
     }
 
-    void inject(const std::string &s) {
-        LOG("tcp-client inject");
-        try {
-            write(socket_, boost::asio::buffer(s));
-        } catch (...) {
-            // dont care
+    void write_start() {
+        if (write_in_progress_ || shutting_down_) {
+            return;
         }
+
+        size_t length = 0;
+        const char *data = tx_buf_.get_data_buf(&length);
+        if (length == 0) {
+            return;
+        }
+
+        write_in_progress_ = true;
+        auto x = std::bind(&TcpClient::write_completion, shared_from_this(),
+                           std::placeholders::_1, std::placeholders::_2);
+        boost::asio::async_write(socket_, boost::asio::buffer(data, length),
+                                 boost::asio::transfer_at_least(1), x);
+    }
+
+    void write_completion(const boost::system::error_code &error,
+                                       size_t length) {
+        write_in_progress_ = false;
+        if (shutting_down_) return;
+
+        if (error) {
+            boost::system::error_code e;
+            std::cout << "Write error, clearning socket!\r\n";
+            tx_buf_.clear();
+            return;
+        }
+
+        tx_buf_.consume(length);
+        write_start();
+    }
+
+    void inject(const char *p, size_t l) {
+        tx_buf_.push(p, l);
+        write_start();
     }
 
   private:
@@ -142,8 +172,10 @@ struct TcpClient : public Iobase, std::enable_shared_from_this<TcpClient> {
     boost::asio::deadline_timer timer_;
     HubPtr hub_;
     std::array<char, 32> buf_;
+    RingBuf<1024 * 1024 * 4> tx_buf_;
     boost::asio::ip::tcp::socket socket_;
     bool shutting_down_ = false;
+    size_t write_in_progress_ = 0;
     std::string host_, port_;
 };
 }  // namespace TermHub

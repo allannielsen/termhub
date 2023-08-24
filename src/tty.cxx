@@ -90,7 +90,7 @@ void Tty::ActionBreak::exec(TtyPtr tty, IoPtr dut) {
 
 void Tty::ActionInject::exec(TtyPtr tty, IoPtr dut) {
     LOG("Injecting data: " << Fmt::EscapedString(data));
-    dut->inject(data);
+    dut->inject(data.c_str(), data.size());
 }
 
 void Tty::action_spawn_completed(int pid, int flags, int status) {
@@ -115,8 +115,43 @@ void Tty::ActionSpawn::exec(TtyPtr tty, IoPtr dut) {
 
 bool Tty::tty_cmd_del(const char *&b, const char *e) { return false; }
 
-void Tty::inject(const std::string &s) {
-    write(output_, boost::asio::buffer(s));
+void Tty::write_start() {
+    if (write_in_progress_ || shutting_down_) {
+        return;
+    }
+
+    size_t length = 0;
+    const char *data = tx_buf_.get_data_buf(&length);
+    if (length == 0) {
+        return;
+    }
+
+    write_in_progress_ = true;
+    auto x = std::bind(&Tty::write_completion, shared_from_this(),
+                       std::placeholders::_1, std::placeholders::_2);
+    boost::asio::async_write(output_, boost::asio::buffer(data, length),
+                             boost::asio::transfer_at_least(1), x);
+}
+
+void Tty::write_completion(const boost::system::error_code &error,
+                           size_t length) {
+    write_in_progress_ = false;
+    if (shutting_down_) return;
+
+    if (error) {
+        boost::system::error_code e;
+        std::cout << "Write error, clearning socket!\r\n";
+        tx_buf_.clear();
+        return;
+    }
+
+    tx_buf_.consume(length);
+    write_start();
+}
+
+void Tty::inject(const char *p, size_t l) {
+    tx_buf_.push(p, l);
+    write_start();
 }
 
 void Tty::init() {
@@ -140,7 +175,7 @@ void Tty::handle_read_data(const char *c, size_t s) {
     std::string str(c, s);
     LOG("tty read ptr:" << (void *)dut_.get()
                         << " data:" << Fmt::EscapedString(str));
-    dut_->inject(str);
+    dut_->inject(c, s);
 }
 
 void Tty::handle_read_token(uint32_t t) {

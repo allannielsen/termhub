@@ -9,6 +9,7 @@
 #include "log.hxx"
 #include "hub.hxx"
 #include "iobase.hxx"
+#include "ringbuf.hxx"
 #include "signal_exit.hxx"
 
 namespace TermHub {
@@ -30,10 +31,14 @@ struct Rs232Client : public Iobase, std::enable_shared_from_this<Rs232Client> {
     void start();
     void shutdown();
     void send_break();
-    void inject(const std::string &s);
+    void inject(const char *p, size_t l);
     void handle_read(const boost::system::error_code &error, size_t length);
     void reconnect_timeout();
     void handle_reconnect_timeout(const boost::system::error_code& e);
+
+    void write_start();
+    void write_completion(const boost::system::error_code &error,
+                          size_t length);
 
   private:
     Rs232Client(boost::asio::io_service &asio, HubPtr h, std::string path,
@@ -41,7 +46,9 @@ struct Rs232Client : public Iobase, std::enable_shared_from_this<Rs232Client> {
 
     HubPtr hub_;
     std::array<char, 32> buf_;
+    RingBuf<10240> tx_buf_;
     bool shutting_down_ = false;
+    bool write_in_progress_ = false;
     boost::asio::serial_port serial_;
     std::string path_;
     int baudrate_;
