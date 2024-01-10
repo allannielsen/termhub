@@ -1,0 +1,59 @@
+// Copyright 2023 Dennis Hezel
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef AGRPC_DETAIL_DEFAULT_COMPLETION_TOKEN_HPP
+#define AGRPC_DETAIL_DEFAULT_COMPLETION_TOKEN_HPP
+
+#include <agrpc/detail/asio_forward.hpp>
+#include <agrpc/detail/config.hpp>
+#include <agrpc/use_sender.hpp>
+
+AGRPC_NAMESPACE_BEGIN()
+
+namespace detail
+{
+#ifdef AGRPC_ASIO_HAS_CO_AWAIT
+using DefaultCompletionToken = asio::use_awaitable_t<>;
+#else
+using DefaultCompletionToken = agrpc::UseSender;
+#endif
+
+#if defined(AGRPC_STANDALONE_ASIO) || defined(AGRPC_BOOST_ASIO)
+#if defined(AGRPC_UNIFEX) || defined(AGRPC_STDEXEC)
+template <class Executor>
+using DefaultCompletionTokenT = detail::ConditionalT<std::is_same_v<void, asio::default_completion_token_t<Executor>>,
+                                                     agrpc::UseSender, asio::default_completion_token_t<Executor>>;
+#else
+template <class Executor>
+using DefaultCompletionTokenT = asio::default_completion_token_t<Executor>;
+#endif
+#else
+template <class>
+using DefaultCompletionTokenT = detail::DefaultCompletionToken;
+#endif
+
+#if defined(AGRPC_STANDALONE_ASIO) || defined(AGRPC_BOOST_ASIO)
+template <class Executor>
+using LegacyDefaultCompletionTokenT =
+    detail::ConditionalT<std::is_same_v<void, asio::default_completion_token_t<Executor>>,
+                         detail::DefaultCompletionToken, asio::default_completion_token_t<Executor>>;
+#else
+template <class>
+using LegacyDefaultCompletionTokenT = detail::DefaultCompletionToken;
+#endif
+}
+
+AGRPC_NAMESPACE_END
+
+#endif  // AGRPC_DETAIL_DEFAULT_COMPLETION_TOKEN_HPP

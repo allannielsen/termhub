@@ -1,0 +1,36 @@
+---
+Checks: "clang-diagnostic-*,clang-analyzer-*,readability-*,modernize-*,performance-*,bugprone-*,cert-*,-readability-magic-numbers,-readability-identifier-length,-readability-named-parameter,-modernize-use-trailing-return-type,-modernize-avoid-c-arrays,-cert-dcl58-cpp,-bugprone-forwarding-reference-overload,-readability-uppercase-literal-suffix,-cert-dcl21-cpp"
+HeaderFilterRegex: "agrpc/.*"
+CheckOptions:
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.ClassIgnoredRegexp
+    value: "(rebind_executor|unstoppable_token|callback_type|iterator)"
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.ConstexprVariableIgnoredRegexp
+    value: "(grpc_initiate|wait|use_sender|repeatedly_request|value|read|write|request|write_last|writes_done|finish|send_initial_metadata|finish_with_error|write_and_finish|read_initial_metadata|get_completion_queue|notify_when_done|notify_on_state_change|is_sender_v|sends_done|is_valid|is_noexcept)"
+  - key: readability-identifier-naming.MemberConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case
+  - key: readability-identifier-naming.MemberSuffix
+    value: "_"
+  - key: readability-identifier-naming.MethodCase
+    value: lower_case
+  - key: readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeAliasIgnoredRegexp
+    value: "(value_type|difference_type|reference|pointer|iterator_category|result_type|connect_result_t|stop_token_type_t|default_completion_token_type|as_default_on_t|other|target_type|type|completion_handler_type|handler_type|return_type|executor_type|allocator_type|value_types|error_types)"
