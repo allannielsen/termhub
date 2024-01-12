@@ -1,13 +1,17 @@
 #ifndef __TERMHUB_HUB_HXX__
 #define __TERMHUB_HUB_HXX__
 
-#include <string>
+#include <chrono>
 #include <memory>
 #include <vector>
 
 namespace TermHub {
 struct Iobase;
+struct IoDutbase;
+typedef std::chrono::time_point<std::chrono::system_clock> now_t;
+
 typedef std::shared_ptr<Iobase> IoPtr;
+typedef std::shared_ptr<IoDutbase> IoDutPtr;
 
 class DisconnectPostpone;
 
@@ -17,6 +21,7 @@ struct Hub {
     static std::shared_ptr<Hub> create();
     void post(IoPtr peer, const char *data, size_t l);
 
+    void status_dump(std::stringstream &ss, const now_t &now);
     void shutdown();
     void connect(IoPtr c);
     void disconnect();
@@ -29,6 +34,6 @@ struct Hub {
 };
 
 typedef std::shared_ptr<Hub> HubPtr;
-}  // namespace TermHub
+} // namespace TermHub
 
 #endif

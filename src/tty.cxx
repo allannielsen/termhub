@@ -1,25 +1,22 @@
-#include <unistd.h>
-#include <termios.h>
 #include <functional>
+#include <termios.h>
+#include <unistd.h>
 
-#include "tty.hxx"
+#include "cmd-registry.hxx"
 #include "log.hxx"
 #include "process.hxx"
 #include "signal_exit.hxx"
-#include "cmd-registry.hxx"
+#include "tty.hxx"
 
 namespace TermHub {
 
 Tty::Tty(boost::asio::io_service &asio, HubPtr h, IoPtr d)
-    : dut_(d),
-      hub_(h),
-      asio_(asio),
-      input_(asio_, ::dup(STDIN_FILENO)),
+    : dut_(d), hub_(h), asio_(asio), input_(asio_, ::dup(STDIN_FILENO)),
       output_(asio_, ::dup(STDOUT_FILENO)),
       key_tokenizer(
-              std::bind(&Tty::handle_read_token, this, std::placeholders::_1),
-              std::bind(&Tty::handle_read_data, this, std::placeholders::_1,
-                        std::placeholders::_2)),
+          std::bind(&Tty::handle_read_token, this, std::placeholders::_1),
+          std::bind(&Tty::handle_read_data, this, std::placeholders::_1,
+                    std::placeholders::_2)),
       process_(nullptr) {
     tcgetattr(STDIN_FILENO, &old_tio);
     new_tio = old_tio;
@@ -127,6 +124,7 @@ void Tty::write_start() {
     }
 
     write_in_progress_ = true;
+    stat_tx_request(length);
     auto x = std::bind(&Tty::write_completion, shared_from_this(),
                        std::placeholders::_1, std::placeholders::_2);
     boost::asio::async_write(output_, boost::asio::buffer(data, length),
@@ -136,21 +134,25 @@ void Tty::write_start() {
 void Tty::write_completion(const boost::system::error_code &error,
                            size_t length) {
     write_in_progress_ = false;
-    if (shutting_down_) return;
+    if (shutting_down_)
+        return;
 
     if (error) {
         boost::system::error_code e;
         std::cout << "Write error, clearning socket!\r\n";
+        stat_tx_complete(0);
         tx_buf_.clear();
         return;
     }
 
+    stat_tx_complete(length);
     tx_buf_.consume(length);
     write_start();
 }
 
 void Tty::inject(const char *p, size_t l) {
-    tx_buf_.push(p, l);
+    l -= tx_buf_.push(p, l);
+    stat_tx_drop_inc(l);
     write_start();
 }
 
@@ -175,6 +177,7 @@ void Tty::handle_read_data(const char *c, size_t s) {
     std::string str(c, s);
     LOG("tty read ptr:" << (void *)dut_.get()
                         << " data:" << Fmt::EscapedString(str));
+    stat_rx_inc(s);
     dut_->inject(c, s);
 }
 
@@ -200,7 +203,8 @@ void Tty::shutdown() {
 }
 
 void Tty::handle_read(const boost::system::error_code &error, size_t length) {
-    if (shutting_down_) return;
+    if (shutting_down_)
+        return;
 
     if (error) {
         LOG("Error: " << error.message());
@@ -227,5 +231,10 @@ void Tty::handle_read(const boost::system::error_code &error, size_t length) {
 
     start();
 }
-}  // namespace TermHub
 
+void Tty::status_dump(std::stringstream &ss, const now_t &base_time) {
+    ss << "tty() {\n";
+    stat.pr(ss, base_time);
+    ss << "}\n\n";
+}
+} // namespace TermHub

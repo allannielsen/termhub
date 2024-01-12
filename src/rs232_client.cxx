@@ -13,12 +13,12 @@ void Rs232Client::open_and_start() {
     serial_.open(path_);
     serial_.set_option(io::serial_port_base::baud_rate(baudrate_));
     serial_.set_option(
-            io::serial_port_base::parity(io::serial_port_base::parity::none));
+        io::serial_port_base::parity(io::serial_port_base::parity::none));
     serial_.set_option(io::serial_port_base::character_size(8));
     serial_.set_option(io::serial_port_base::flow_control(
-                    io::serial_port_base::flow_control::none));
-    serial_.set_option(io::serial_port_base::stop_bits(
-                    io::serial_port_base::stop_bits::one));
+        io::serial_port_base::flow_control::none));
+    serial_.set_option(
+        io::serial_port_base::stop_bits(io::serial_port_base::stop_bits::one));
 
     start();
 }
@@ -33,7 +33,7 @@ void Rs232Client::send_break() {
     LOG("rs232(" << (void *)this << "): break");
     try {
         serial_.send_break();
-    } catch(...) {
+    } catch (...) {
         LOG("rs232(" << (void *)this << "): break-unknown error...");
     }
 }
@@ -49,17 +49,19 @@ void Rs232Client::start() {
 
 void Rs232Client::handle_read(const boost::system::error_code &error,
                               size_t length) {
-    if (shutting_down_) return;
+    if (shutting_down_)
+        return;
 
     if (error) {
-        boost::system::error_code e;
         LOG("rs232(" << (void *)this << "): Read-Error: " << error.message());
         reconnect_timeout();
         return;
     }
 
     std::string s(&buf_[0], length);
-    LOG("rs232(" << (void *)this << "): handle_read data: " << Fmt::EscapedString(s));
+    LOG("rs232(" << (void *)this
+                 << "): handle_read data: " << Fmt::EscapedString(s));
+    stat_rx_inc(length);
     hub_->post(shared_from_this(), &buf_[0], length);
     LOG("rs232(" << (void *)this << "): handle_read ended");
     start();
@@ -77,6 +79,7 @@ void Rs232Client::write_start() {
     }
 
     write_in_progress_ = true;
+    stat_tx_request(length);
     auto x = std::bind(&Rs232Client::write_completion, shared_from_this(),
                        std::placeholders::_1, std::placeholders::_2);
     boost::asio::async_write(serial_, boost::asio::buffer(data, length),
@@ -84,29 +87,34 @@ void Rs232Client::write_start() {
 }
 
 void Rs232Client::write_completion(const boost::system::error_code &error,
-                              size_t length) {
+                                   size_t length) {
     write_in_progress_ = false;
-    if (shutting_down_) return;
+    if (shutting_down_)
+        return;
 
     if (error) {
-        boost::system::error_code e;
         LOG("rs232(" << (void *)this << "): Write-Error: " << error.message());
+        stat_tx_complete(0);
+        stat_tx_error();
         tx_buf_.clear();
         return;
     }
 
     LOG("rs232(" << (void *)this << "): write_completion data: " << length);
+    stat_tx_complete(length);
     tx_buf_.consume(length);
     write_start();
 }
 
 void Rs232Client::inject(const char *p, size_t l) {
-    tx_buf_.push(p, l);
+    l -= tx_buf_.push(p, l);
+    stat_tx_drop_inc(l);
     write_start();
 }
 
 void Rs232Client::reconnect_timeout() {
-    if (shutting_down_) return;
+    if (shutting_down_)
+        return;
 
     if (!sleeping_) {
         LOG("rs232(" << (void *)this << "): async_sleep");
@@ -121,7 +129,7 @@ void Rs232Client::reconnect_timeout() {
     }
 }
 
-void Rs232Client::handle_reconnect_timeout(const boost::system::error_code& e) {
+void Rs232Client::handle_reconnect_timeout(const boost::system::error_code &e) {
     sleeping_ = false;
 
     try {
@@ -140,6 +148,7 @@ void Rs232Client::handle_reconnect_timeout(const boost::system::error_code& e) {
     }
 
     if (ok) {
+        stat_connected_inc();
         std::string s;
         s.append("<Connected to ");
         s.append(path_);
@@ -157,5 +166,10 @@ void Rs232Client::handle_reconnect_timeout(const boost::system::error_code& e) {
     }
 }
 
+void Rs232Client::status_dump(std::stringstream &ss, const now_t &base_time) {
+    ss << "dut-rs232(" << path_ << ") {\n";
+    stat.pr(ss, base_time);
+    ss << "}\n\n";
+}
 
-}  // namespace TermHub
+} // namespace TermHub

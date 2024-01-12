@@ -1,11 +1,11 @@
 #include "process.hxx"
-#include "log.hxx"
 #include "fmt.hxx"
+#include "log.hxx"
 
 namespace TermHub {
 
 extern int listen_port_number;
-std::shared_ptr<Process> Process::create(boost::asio::io_service& asio,
+std::shared_ptr<Process> Process::create(boost::asio::io_service &asio,
                                          HubPtr h, IoPtr d, std::string s,
                                          cb_t cb) {
     boost::process::context ctx;
@@ -24,23 +24,18 @@ std::shared_ptr<Process> Process::create(boost::asio::io_service& asio,
     return p;
 }
 
-Process::Process(boost::asio::io_service& asio, HubPtr h, IoPtr d,
+Process::Process(boost::asio::io_service &asio, HubPtr h, IoPtr d,
                  boost::process::context ctx, std::string app, cb_t cb)
-    : dut_(d),
-      hub_(h),
-      child(boost::process::launch_shell(app, ctx)),
-      in(asio),
-      out(asio),
-      err(asio),
-      call_back(cb) {
+    : dut_(d), hub_(h), child(boost::process::launch_shell(app, ctx)), in(asio),
+      out(asio), err(asio), call_back(cb) {
 
-    boost::process::postream& os = child.get_stdin();
+    boost::process::postream &os = child.get_stdin();
     in.assign(os.handle().release());
 
-    boost::process::pistream& is = child.get_stdout();
+    boost::process::pistream &is = child.get_stdout();
     out.assign(is.handle().release());
 
-    boost::process::pistream& es = child.get_stderr();
+    boost::process::pistream &es = child.get_stderr();
     err.assign(es.handle().release());
 }
 
@@ -70,7 +65,7 @@ void Process::write_start() {
 }
 
 void Process::write_completion(const boost::system::error_code &error,
-                           size_t length) {
+                               size_t length) {
     write_in_progress_ = false;
 
     if (error) {
@@ -83,7 +78,6 @@ void Process::write_completion(const boost::system::error_code &error,
     tx_buf_.consume(length);
     write_start();
 }
-
 
 void Process::start() {
     read_out();
@@ -110,7 +104,8 @@ void Process::read_err() {
 
 void Process::shutdown() {
     exiting_ = true;
-    if (dead_) return;
+    if (dead_)
+        return;
 
     child.terminate(true);
     clean_up();
@@ -121,14 +116,16 @@ void Process::kill() {
     clean_up();
 }
 
-void Process::handle_read_out(const boost::system::error_code& error,
+void Process::handle_read_out(const boost::system::error_code &error,
                               std::size_t length) {
-    if (exiting_) return;
+    if (exiting_)
+        return;
 
     if (error) {
         LOG("Error: " << error.message());
         error_out = true;
-        if (error_err && error_out) clean_up();
+        if (error_err && error_out)
+            clean_up();
         return;
     }
 
@@ -147,7 +144,7 @@ void Process::handle_read_out(const boost::system::error_code& error,
     LOG("Process read ended");
 }
 
-void Process::handle_read_err(const boost::system::error_code& error,
+void Process::handle_read_err(const boost::system::error_code &error,
                               std::size_t length) {
     if (exiting_) {
         return;
@@ -156,7 +153,8 @@ void Process::handle_read_err(const boost::system::error_code& error,
     if (error) {
         LOG("Error: " << error.message());
         error_err = true;
-        if (error_err && error_out) clean_up();
+        if (error_err && error_out)
+            clean_up();
         return;
     }
 
@@ -174,7 +172,8 @@ void Process::handle_read_err(const boost::system::error_code& error,
 }
 
 void Process::clean_up() {
-    if (dead_) return;
+    if (dead_)
+        return;
 
     dead_ = true;
     auto id = child.wait();
@@ -186,5 +185,9 @@ void Process::clean_up() {
 
     hub_->disconnect();
 }
-}
 
+void Process::status_dump(std::stringstream &ss, const now_t &base_time) {
+    ss << "Process\n";
+    ss << "=======\n";
+}
+} // namespace TermHub

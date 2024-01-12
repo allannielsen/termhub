@@ -5,9 +5,9 @@
 #include <boost/asio.hpp>
 
 #include "iobase.hxx"
+#include "key-tokenizer.hxx"
 #include "process.hxx"
 #include "ringbuf.hxx"
-#include "key-tokenizer.hxx"
 
 namespace TermHub {
 
@@ -28,6 +28,7 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
     void inject(const char *p, size_t l);
     void shutdown();
 
+    void status_dump(std::stringstream &ss, const now_t &now);
 
     struct Action {
         virtual void exec(TtyPtr tty, IoPtr dut) = 0;
@@ -68,7 +69,7 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
 
     void write_start();
     void write_completion(const boost::system::error_code &error,
-                                       size_t length);
+                          size_t length);
 
   private:
     Tty(boost::asio::io_service &asio, HubPtr h, IoPtr d);
@@ -102,6 +103,6 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
     std::shared_ptr<Process> process_;
     std::vector<std::shared_ptr<Action>> actions;
 };
-}  // namespace TermHub
+} // namespace TermHub
 
 #endif

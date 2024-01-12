@@ -2,8 +2,8 @@
 #define __TERMHUB_DUT_DUMMY_ECHO_HXX__
 #include "hub.hxx"
 #include "iobase.hxx"
-#include <iostream>
 #include <memory>
+#include <string>
 
 namespace TermHub {
 struct DutDummyEcho : public Iobase,
@@ -15,6 +15,10 @@ struct DutDummyEcho : public Iobase,
 
     ~DutDummyEcho() {}
 
+    void status_dump(std::stringstream &ss, const now_t &base_time) {
+        ss << "Dummy-dut here, no further status\n";
+    }
+
     void start() {}
 
     void inject(const char *c, size_t s) {
@@ -25,6 +29,9 @@ struct DutDummyEcho : public Iobase,
             else
                 res.push_back(*c);
         }
+
+        stat_rx_inc(s);
+        stat_tx_complete(s);
         hub_->post(shared_from_this(), res.c_str(), res.size());
     }
 
@@ -34,6 +41,6 @@ struct DutDummyEcho : public Iobase,
     DutDummyEcho(HubPtr h) : hub_(h) {}
     HubPtr hub_;
 };
-}  // namespace TermHub
+} // namespace TermHub
 
 #endif

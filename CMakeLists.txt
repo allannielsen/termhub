@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.20)
 project (termhub)
 
 string (REPLACE " -" ";-" CXX_FLAGS        "${CMAKE_CXX_FLAGS}")
@@ -9,6 +9,7 @@ list(REMOVE_DUPLICATES CXX_FLAGS)
 string (REPLACE ";-" " -" CXX_FLAGS        "${CXX_FLAGS}")
 SET(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 SET(Boost_USE_STATIC_LIBS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 #enable_testing()
 
@@ -28,7 +29,9 @@ include_directories(key-tokenizer/include)
 add_library(th
     src/cmd-registry.cxx
     src/fmt.cxx
+    src/cmd.cxx
     src/hub.cxx
+    src/tcp_client.cxx
     src/process.cxx
     src/rs232_client.cxx
     src/signal_exit.cxx
