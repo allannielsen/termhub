@@ -2,6 +2,8 @@
 #define __TERMHUB_RING_BUF_HXX__
 
 #include <algorithm>
+#include <array>
+#include <string.h>
 
 namespace TermHub {
 
@@ -23,6 +25,7 @@ public:
       }
 
       memcpy(&buf[tail], data, chunk);
+      data += chunk;
       tail_inc(chunk);
       l -= chunk;
     }
