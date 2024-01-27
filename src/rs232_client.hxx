@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+#include "dut.hxx"
 #include "hub.hxx"
 #include "iobase.hxx"
 #include "log.hxx"
@@ -13,9 +14,9 @@
 #include "signal_exit.hxx"
 
 namespace TermHub {
-struct Rs232Client : public Iobase, std::enable_shared_from_this<Rs232Client> {
-    static IoPtr create(boost::asio::io_service &asio, HubPtr h,
-                        std::string path, int baudrate) {
+struct Rs232Client : public Dut, std::enable_shared_from_this<Rs232Client> {
+    static DutPtr create(boost::asio::io_service &asio, HubPtr h,
+                         std::string path, int baudrate) {
         std::shared_ptr<Rs232Client> p(
             new Rs232Client(asio, h, path, baudrate));
         LOG("create rs232 client " << (void *)p.get());

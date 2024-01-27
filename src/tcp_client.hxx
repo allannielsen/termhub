@@ -6,15 +6,16 @@
 #include <memory>
 #include <string>
 
+#include "dut.hxx"
 #include "hub.hxx"
 #include "iobase.hxx"
 #include "ringbuf.hxx"
 #include "signal_exit.hxx"
 
 namespace TermHub {
-struct TcpClient : public Iobase, std::enable_shared_from_this<TcpClient> {
-    static IoPtr create(boost::asio::io_service &asio, HubPtr h,
-                        std::string host, std::string port);
+struct TcpClient : public Dut, std::enable_shared_from_this<TcpClient> {
+    static DutPtr create(boost::asio::io_service &asio, HubPtr h,
+                         std::string host, std::string port);
 
     ~TcpClient();
 

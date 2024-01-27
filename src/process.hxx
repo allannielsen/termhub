@@ -5,6 +5,7 @@
 #include <boost/process.hpp>
 #include <functional>
 
+#include "dut.hxx"
 #include "iobase.hxx"
 #include "log.hxx"
 #include "ringbuf.hxx"
@@ -16,7 +17,7 @@ class Process : public Iobase, public std::enable_shared_from_this<Process> {
   public:
     typedef std::function<void(int, int, int)> cb_t;
     static std::shared_ptr<Process> create(boost::asio::io_service &asio,
-                                           HubPtr h, IoPtr d, std::string s,
+                                           HubPtr h, DutPtr d, std::string s,
                                            cb_t cb);
 
     ~Process();
@@ -30,7 +31,7 @@ class Process : public Iobase, public std::enable_shared_from_this<Process> {
     void status_dump(std::stringstream &ss, const now_t &base_time);
 
   private:
-    Process(boost::asio::io_service &asio, HubPtr h, IoPtr d,
+    Process(boost::asio::io_service &asio, HubPtr h, DutPtr d,
             boost::process::context cxt, std::string app, cb_t cb);
 
     void read_out();
@@ -46,7 +47,7 @@ class Process : public Iobase, public std::enable_shared_from_this<Process> {
     void write_completion(const boost::system::error_code &error,
                           size_t length);
 
-    IoPtr dut_;
+    DutPtr dut_;
     HubPtr hub_;
     bool dead_ = false;
     bool exiting_ = false;

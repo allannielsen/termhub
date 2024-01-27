@@ -1,4 +1,5 @@
 #include "cmd.hxx"
+#include "dut.hxx"
 #include <chrono>
 
 namespace TermHub {

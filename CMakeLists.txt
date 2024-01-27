@@ -28,13 +28,14 @@ include_directories(key-tokenizer/include)
 
 add_library(th
     src/cmd-registry.cxx
-    src/fmt.cxx
     src/cmd.cxx
+    src/dut.cxx
+    src/fmt.cxx
     src/hub.cxx
-    src/tcp_client.cxx
     src/process.cxx
     src/rs232_client.cxx
     src/signal_exit.cxx
+    src/tcp_client.cxx
     src/tty.cxx
 )
 

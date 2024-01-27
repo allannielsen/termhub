@@ -14,7 +14,7 @@ class TcpSession : public Iobase,
                    public std::enable_shared_from_this<TcpSession> {
   public:
     static std::shared_ptr<TcpSession> create(boost::asio::io_service &asio,
-                                              IoPtr d, HubPtr h) {
+                                              DutPtr d, HubPtr h) {
         return std::shared_ptr<TcpSession>(new TcpSession(asio, d, h));
     }
 
@@ -85,7 +85,7 @@ class TcpSession : public Iobase,
     }
 
   private:
-    TcpSession(boost::asio::io_service &asio, IoPtr d, HubPtr h)
+    TcpSession(boost::asio::io_service &asio, DutPtr d, HubPtr h)
         : dut_(d), hub_(h), socket_(asio) {}
 
     void read() {
@@ -123,7 +123,7 @@ class TcpSession : public Iobase,
     }
 
     boost::asio::ip::tcp::endpoint peer_ep_;
-    IoPtr dut_;
+    DutPtr dut_;
     HubPtr hub_;
     std::array<char, 32> rx_buf_;
     RingBuf<102400> tx_buf_;
@@ -141,7 +141,7 @@ struct TcpServer
     typedef std::enable_shared_from_this<TcpServer<EndPoint, Session>> BASE;
 
     static std::shared_ptr<THIS> create(boost::asio::io_service &asio,
-                                        EndPoint ep, IoPtr d, HubPtr h) {
+                                        EndPoint ep, DutPtr d, HubPtr h) {
         std::shared_ptr<THIS> p(new TcpServer(asio, ep, d, h));
         signal_exit_reg(std::bind(&TcpServer::shutdown, p));
         p->start_accept();
@@ -160,7 +160,7 @@ struct TcpServer
     }
 
   private:
-    TcpServer(boost::asio::io_service &asio, EndPoint ep, IoPtr d, HubPtr h)
+    TcpServer(boost::asio::io_service &asio, EndPoint ep, DutPtr d, HubPtr h)
         : ep_(ep), dut_(d), hub_(h), asio_(asio), acceptor_(asio_) {
         acceptor_.open(ep.protocol());
         acceptor_.set_option(
@@ -195,7 +195,7 @@ struct TcpServer
     }
 
     EndPoint ep_;
-    IoPtr dut_;
+    DutPtr dut_;
     HubPtr hub_;
     boost::asio::io_service &asio_;
     boost::asio::ip::tcp::acceptor acceptor_;

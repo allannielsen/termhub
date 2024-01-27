@@ -10,7 +10,7 @@
 
 namespace TermHub {
 
-Tty::Tty(boost::asio::io_service &asio, HubPtr h, IoPtr d)
+Tty::Tty(boost::asio::io_service &asio, HubPtr h, DutPtr d)
     : dut_(d), hub_(h), asio_(asio), input_(asio_, ::dup(STDIN_FILENO)),
       output_(asio_, ::dup(STDOUT_FILENO)),
       key_tokenizer(
@@ -75,17 +75,17 @@ bool Tty::tty_cmd_add(const char *&b, const char *e) {
     return false;
 }
 
-void Tty::ActionQuit::exec(TtyPtr tty, IoPtr dut) {
+void Tty::ActionQuit::exec(TtyPtr tty, DutPtr dut) {
     LOG("Call signal_exit");
     signal_exit();
 }
 
-void Tty::ActionBreak::exec(TtyPtr tty, IoPtr dut) {
+void Tty::ActionBreak::exec(TtyPtr tty, DutPtr dut) {
     LOG("Call break");
     dut->send_break();
 }
 
-void Tty::ActionInject::exec(TtyPtr tty, IoPtr dut) {
+void Tty::ActionInject::exec(TtyPtr tty, DutPtr dut) {
     LOG("Injecting data: " << Fmt::EscapedString(data));
     dut->inject(data.c_str(), data.size());
 }
@@ -101,7 +101,7 @@ void Tty::action_spawn_completed(int pid, int flags, int status) {
     input_enable();
 }
 
-void Tty::ActionSpawn::exec(TtyPtr tty, IoPtr dut) {
+void Tty::ActionSpawn::exec(TtyPtr tty, DutPtr dut) {
     tty->input_disable();
     auto x = std::bind(&Tty::action_spawn_completed, tty, std::placeholders::_1,
                        std::placeholders::_2, std::placeholders::_3);

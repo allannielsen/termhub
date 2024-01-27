@@ -6,7 +6,7 @@ namespace TermHub {
 
 extern int listen_port_number;
 std::shared_ptr<Process> Process::create(boost::asio::io_service &asio,
-                                         HubPtr h, IoPtr d, std::string s,
+                                         HubPtr h, DutPtr d, std::string s,
                                          cb_t cb) {
     boost::process::context ctx;
     ctx.stdin_behavior = boost::process::capture_stream();
@@ -24,7 +24,7 @@ std::shared_ptr<Process> Process::create(boost::asio::io_service &asio,
     return p;
 }
 
-Process::Process(boost::asio::io_service &asio, HubPtr h, IoPtr d,
+Process::Process(boost::asio::io_service &asio, HubPtr h, DutPtr d,
                  boost::process::context ctx, std::string app, cb_t cb)
     : dut_(d), hub_(h), child(boost::process::launch_shell(app, ctx)), in(asio),
       out(asio), err(asio), call_back(cb) {

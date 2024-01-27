@@ -6,10 +6,10 @@
 #include <string>
 
 namespace TermHub {
-struct DutDummyEcho : public Iobase,
+struct DutDummyEcho : public Dut,
                       public std::enable_shared_from_this<DutDummyEcho> {
 
-    static IoPtr create(HubPtr h) {
+    static DutPtr create(HubPtr h) {
         return std::shared_ptr<DutDummyEcho>(new DutDummyEcho(h));
     }
 

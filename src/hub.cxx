@@ -27,7 +27,31 @@ std::shared_ptr<Hub> Hub::create() {
     return p;
 }
 
-void Hub::post(IoPtr peer, const char *data, size_t l) {
+// void Hub::post(IoPtr peer, const char *data, size_t l) {
+//     DisconnectPostpone dis(this);
+//     auto i = sinks.begin();
+//
+//     LOG("post: " << sinks.size() << " " << disconnect_not_now << " DATA: >"
+//     << l
+//                  << "<");
+//     while (i != sinks.end()) {
+//         auto p = i->lock();
+//         if (p) {
+//             if (p != peer) {
+//                 // LOG("post-inject");
+//                 p->inject(data, l);
+//             }
+//             ++i;
+//         } else {
+//             // LOG("post-ease");
+//             i = sinks.erase(i);
+//         }
+//     }
+//
+//     // LOG("post done");
+// }
+
+void Hub::post(DutPtr peer, const char *data, size_t l) {
     DisconnectPostpone dis(this);
     auto i = sinks.begin();
 
@@ -36,10 +60,7 @@ void Hub::post(IoPtr peer, const char *data, size_t l) {
     while (i != sinks.end()) {
         auto p = i->lock();
         if (p) {
-            if (p != peer) {
-                // LOG("post-inject");
-                p->inject(data, l);
-            }
+            p->inject(data, l);
             ++i;
         } else {
             // LOG("post-ease");

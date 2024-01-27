@@ -16,7 +16,7 @@ struct Tty;
 typedef std::shared_ptr<Tty> TtyPtr;
 
 struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
-    static TtyPtr create(boost::asio::io_service &asio, HubPtr h, IoPtr d) {
+    static TtyPtr create(boost::asio::io_service &asio, HubPtr h, DutPtr d) {
         auto tty = TtyPtr(new Tty(asio, h, d));
         tty->init();
         return tty;
@@ -31,21 +31,21 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
     void status_dump(std::stringstream &ss, const now_t &now);
 
     struct Action {
-        virtual void exec(TtyPtr tty, IoPtr dut) = 0;
+        virtual void exec(TtyPtr tty, DutPtr dut) = 0;
     };
 
     struct ActionQuit : public Action {
-        void exec(TtyPtr tty, IoPtr dut);
+        void exec(TtyPtr tty, DutPtr dut);
     };
 
     struct ActionBreak : public Action {
-        void exec(TtyPtr tty, IoPtr dut);
+        void exec(TtyPtr tty, DutPtr dut);
     };
 
     struct ActionInject : public Action {
         ActionInject(std::string s) : data(s) {}
 
-        void exec(TtyPtr tty, IoPtr dut);
+        void exec(TtyPtr tty, DutPtr dut);
 
         std::string data;
     };
@@ -55,7 +55,7 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
                     TtyPtr t)
             : tty_(t), asio_(a), hub_(h), app_(s) {}
 
-        void exec(TtyPtr tty, IoPtr dut);
+        void exec(TtyPtr tty, DutPtr dut);
 
         TtyPtr tty_;
         boost::asio::io_service &asio_;
@@ -72,7 +72,7 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
                           size_t length);
 
   private:
-    Tty(boost::asio::io_service &asio, HubPtr h, IoPtr d);
+    Tty(boost::asio::io_service &asio, HubPtr h, DutPtr d);
     void init();
 
     void handle_read(const boost::system::error_code &error, size_t length);
@@ -87,7 +87,7 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
     typedef Buf::iterator BufItr;
 
     Buf buf_;
-    IoPtr dut_;
+    DutPtr dut_;
     HubPtr hub_;
     boost::asio::io_service &asio_;
     boost::asio::posix::stream_descriptor input_;

@@ -3,8 +3,8 @@
 
 namespace TermHub {
 
-IoPtr TcpClient::create(boost::asio::io_service &asio, HubPtr h,
-                        std::string host, std::string port) {
+DutPtr TcpClient::create(boost::asio::io_service &asio, HubPtr h,
+                         std::string host, std::string port) {
     std::shared_ptr<TcpClient> p(new TcpClient(asio, h, host, port));
     // LOG("create " << (void *)p.get());
     signal_exit_reg(std::bind(&TcpClient::shutdown, p));
