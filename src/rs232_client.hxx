@@ -3,7 +3,6 @@
 
 #include <boost/asio.hpp>
 #include <iostream>
-#include <memory>
 #include <string>
 
 #include "dut.hxx"
@@ -15,21 +14,10 @@
 
 namespace TermHub {
 struct Rs232Client : public Dut {
-    // static DutPtr create(boost::asio::io_service &asio, HubPtr h,
-    //                      std::string path, int baudrate) {
-    //     std::shared_ptr<Dut> p(new Rs232Client(asio, h, path, baudrate));
-    //     LOG("create rs232 client " << (void *)p.get());
-    //     signal_exit_reg(std::bind(&Rs232Client::shutdown, p));
-
-    //    return p;
-    //}
     Rs232Client(boost::asio::io_service &asio, HubPtr h, std::string path,
                 int baudrate);
 
     ~Rs232Client() { LOG("destruct rs232 client " << (void *)this); }
-
-    void open_and_start();
-    void start();
 
     void child_close() override;
     std::string child_connect() override;
