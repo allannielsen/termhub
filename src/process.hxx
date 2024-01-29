@@ -22,13 +22,14 @@ class Process : public Iobase, public std::enable_shared_from_this<Process> {
 
     ~Process();
 
-    void inject(const char *p, size_t l);
-    void start();
-    void shutdown();
+    void inject(const char *p, size_t l) override;
+    void start() override;
+    void shutdown() override;
+    void io_wake_up_read() override { LOG("process: wake-up-read"); }
     void kill();
     int get_id() { return child.get_id(); }
 
-    void status_dump(std::stringstream &ss, const now_t &base_time);
+    void status_dump(std::stringstream &ss, const now_t &base_time) override;
 
   private:
     Process(boost::asio::io_service &asio, HubPtr h, DutPtr d,

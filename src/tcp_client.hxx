@@ -2,14 +2,11 @@
 #define __TERMHUB_TCP_CLIENT_HXX__
 
 #include <boost/asio.hpp>
-#include <iostream>
-#include <memory>
 #include <string>
 
 #include "dut.hxx"
 #include "hub.hxx"
 #include "iobase.hxx"
-#include "ringbuf.hxx"
 #include "signal_exit.hxx"
 
 namespace TermHub {

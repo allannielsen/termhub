@@ -71,6 +71,21 @@ void Hub::post(Dut *peer, const char *data, size_t l) {
     // LOG("post done");
 }
 
+void Hub::wake_up_read() {
+    DisconnectPostpone dis(this);
+    auto i = sleeping_read.begin();
+
+    LOG("hub wake up read");
+    while (i != sleeping_read.end()) {
+        LOG("hub/session wake up read {");
+        (*i)->io_wake_up_read();
+        LOG("}");
+        i = sleeping_read.erase(i);
+    }
+}
+
+// LOG("post done");
+
 void Hub::shutdown() {
     DisconnectPostpone dis(this);
     auto i = sinks.begin();
@@ -87,6 +102,11 @@ void Hub::shutdown() {
     }
 }
 
+void Hub::sleep_read(IoPtr c) {
+    DisconnectPostpone dis(this);
+    sleeping_read.push_back(c);
+}
+
 void Hub::connect(IoPtr c) {
     DisconnectPostpone dis(this);
     sinks.push_back(c);
@@ -98,7 +118,6 @@ void Hub::disconnect() {
     }
 
     auto i = sinks.begin();
-
     while (i != sinks.end()) {
         auto p = i->lock();
 
@@ -107,6 +126,16 @@ void Hub::disconnect() {
             LOG("hub: disconnect delete");
         } else {
             ++i;
+        }
+    }
+
+    auto j = sleeping_read.begin();
+    while (j != sleeping_read.end()) {
+        if ((*j)->dead) {
+            j = sleeping_read.erase(j);
+            LOG("hub: disconnect delete");
+        } else {
+            ++j;
         }
     }
 }

@@ -24,11 +24,13 @@ struct Tty : public Iobase, std::enable_shared_from_this<Tty> {
 
     ~Tty();
 
-    void start();
-    void inject(const char *p, size_t l);
-    void shutdown();
+    void start() override;
+    void inject(const char *p, size_t l) override;
+    void shutdown() override;
 
-    void status_dump(std::stringstream &ss, const now_t &now);
+    void io_wake_up_read() override { LOG("tty: wake-up-read"); }
+
+    void status_dump(std::stringstream &ss, const now_t &now) override;
 
     struct Action {
         virtual void exec(TtyPtr tty, DutPtr dut) = 0;

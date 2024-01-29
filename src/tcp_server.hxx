@@ -19,7 +19,7 @@ class TcpSession : public Iobase,
         return std::shared_ptr<TcpSession>(new TcpSession(asio, d, h));
     }
 
-    void status_dump(std::stringstream &ss, const now_t &base_time) {
+    void status_dump(std::stringstream &ss, const now_t &base_time) override {
         ss << "tcp-session(" << peer_ep_ << ") {\n";
         stat.pr(ss, base_time);
         ss << "}\n\n";
@@ -43,6 +43,7 @@ class TcpSession : public Iobase,
 
         write_in_progress_ = true;
         stat_tx_request(length);
+        LOG("tcp-session(" << (void *)this << "): async-write");
         auto x = std::bind(&TcpSession::write_completion, shared_from_this(),
                            std::placeholders::_1, std::placeholders::_2);
         boost::asio::async_write(socket_, boost::asio::buffer(tx_data, length),
@@ -65,24 +66,35 @@ class TcpSession : public Iobase,
             return;
         }
 
-        // LOG("rs232(" << (void *)this << "): write_completion data: " <<
-        // length);
+        LOG("tcp-session(" << (void *)this << "): async-write complete"
+                           << length);
         stat_tx_complete(length);
         tx_buf_.consume(length);
         write_start();
     }
 
-    void inject(const char *p, size_t l) {
+    void inject(const char *p, size_t l) override {
         l -= tx_buf_.push(p, l);
         stat_tx_drop_inc(l);
         write_start();
     }
-    void start() { read(); }
+    void start() override { read(); }
 
-    void shutdown() {
+    void shutdown() override {
         shutting_down_ = true;
         socket_.cancel();
         socket_.close();
+    }
+
+    void io_wake_up_read() override {
+        if (read_pending_) {
+            read_pending_ = false;
+            LOG("tcp-session(" << (void *)this << "): wake-up-read");
+            read();
+        } else {
+            LOG("tcp-session(" << (void *)this
+                               << "): wake-up-read - no pending");
+        }
     }
 
   private:
@@ -90,17 +102,18 @@ class TcpSession : public Iobase,
         : dut_(d), hub_(h), socket_(asio) {}
 
     void read() {
-        auto x = std::bind(&TcpSession::handle_read, shared_from_this(),
-                           std::placeholders::_1, std::placeholders::_2);
-        boost::asio::async_read(
-            socket_, boost::asio::buffer(&rx_buf_[0], rx_buf_.size()),
-            boost::asio::transfer_at_least(1), x);
-        LOG("tcp-session(" << (void *)this << "): async read");
+        if (shutting_down_ || dead) {
+            return;
+        }
+
+        LOG("tcp-session(" << (void *)this << "): async-read");
+        auto x = std::bind(&TcpSession::handle_read2, shared_from_this(),
+                           std::placeholders::_1);
+        socket_.async_wait(boost::asio::ip::tcp::socket::wait_read, x);
     }
 
-    void handle_read(const boost::system::error_code &error, size_t length) {
-        if (shutting_down_ || dead)
-            return;
+    void handle_read2(const boost::system::error_code &error) {
+        boost::system::error_code ec;
 
         if (error) {
             LOG("tcp-session(" << (void *)this
@@ -110,17 +123,26 @@ class TcpSession : public Iobase,
             return;
         }
 
-        stat_rx_inc(length);
-        std::string s(&rx_buf_[0], length);
-
-        // Hack... But we need a way to send a break signal - now it is <F12>
-        // if (s == std::string("\x1b[24~")) {
-        //  dut_->send_break();
-        //} else {
-        dut_->inject(&rx_buf_[0], length);
-        //}
-
-        read();
+        auto b = dut_->inject_buffer();
+        if (b.size() == 0) {
+            LOG("tcp-session(" << (void *)this
+                               << "): Data ready - but pipeline is full");
+            read_pending_ = true;
+            hub_->sleep_read(shared_from_this());
+        } else {
+            size_t s = socket_.read_some(b, ec);
+            if (ec) {
+                LOG("tcp-session(" << (void *)this << "): Error (disconnect): "
+                                   << error.message());
+                dead = true;
+                hub_->disconnect();
+                return;
+            }
+            LOG("tcp-session(" << (void *)this
+                               << "): async-read complete: " << s);
+            dut_->inject_commit(s);
+            read();
+        }
     }
 
     boost::asio::ip::tcp::endpoint peer_ep_;
@@ -132,6 +154,7 @@ class TcpSession : public Iobase,
     bool shutting_down_ = false;
     bool write_in_progress_ = false;
     const char *tx_data;
+    bool read_pending_ = false;
 };
 
 template <typename EndPoint, typename Session>

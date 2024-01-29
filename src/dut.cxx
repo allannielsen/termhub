@@ -71,6 +71,7 @@ void Dut::shutdown() {
 }
 
 void Dut::read_handler(const boost::system::error_code &error, size_t length) {
+    read_in_progress_ = false;
     if (shutting_down_)
         return;
 
@@ -80,10 +81,11 @@ void Dut::read_handler(const boost::system::error_code &error, size_t length) {
         return;
     }
 
-    // std::string s(&read_buf_[0], length);
+    std::string s(&read_buf_[0], length);
     // LOG("rs232(" << (void *)this
     //              << "): handle_read data: " << Fmt::EscapedString(s));
-    LOG(child_type_ << ": read-complete: " << length);
+    LOG(child_type_ << ": read-complete: " << length << " "
+                    << Fmt::EscapedString(s));
     stat_rx_inc(length);
     hub_->post(this, &read_buf_[0], length);
     child_async_read();
@@ -101,7 +103,9 @@ void Dut::write_start() {
         return;
     }
 
-    LOG(child_type_ << "(" << (void *)this << "): write-start: " << length);
+    std::string s(data, length);
+    LOG(child_type_ << "(" << (void *)this << "): write-start: " << length
+                    << " " << Fmt::EscapedString(s));
     write_in_progress_ = true;
     stat_tx_request(length);
     child_async_write(length, data);
@@ -113,23 +117,39 @@ void Dut::write_handler(const boost::system::error_code &error, size_t length) {
         return;
 
     if (error) {
-        LOG(child_type_ << "(" << (void *)this
-                        << "): write-error: " << error.message());
+        LOG(child_type_ << ": write-error: " << error.message());
         stat_tx_complete(0);
         stat_tx_error();
         write_buf_.clear();
         return;
     }
 
-    LOG(child_type_ << "(" << (void *)this << "): write-complete: " << length);
+    LOG(child_type_ << ": write-complete: " << length);
     stat_tx_complete(length);
     write_buf_.consume(length);
+
+    if (write_buf_.size() <= write_buf_.cap() / 2) {
+        LOG(child_type_ << ": write-complete: Wake up read");
+        hub_->wake_up_read();
+    }
+
     write_start();
 }
 
 void Dut::inject(const char *p, size_t l) {
     l -= write_buf_.push(p, l);
     stat_tx_drop_inc(l);
+    write_start();
+}
+
+boost::asio::mutable_buffer Dut::inject_buffer() {
+    auto b = write_buf_.push_buffer();
+    LOG(child_type_ << ": inject buffer size: " << b.size());
+    return b;
+}
+
+void Dut::inject_commit(size_t s) {
+    write_buf_.push_commit(s);
     write_start();
 }
 

@@ -3,11 +3,11 @@
 
 #include "iobase.hxx"
 #include "ringbuf.hxx"
+#include <boost/asio.hpp>
 
 namespace TermHub {
 struct Dut {
     virtual void send_break(){};
-    void inject(const char *p, size_t l);
     virtual ~Dut() {}
 
     void start();
@@ -22,6 +22,10 @@ struct Dut {
     void write_handler(const boost::system::error_code &error, size_t length);
 
     virtual void status_dump(std::stringstream &ss, const now_t &base_time) = 0;
+
+    void inject(const char *p, size_t l);
+    boost::asio::mutable_buffer inject_buffer();
+    void inject_commit(size_t s);
 
     Dut(boost::asio::io_service &asio, HubPtr h, const std::string &type);
 
@@ -40,13 +44,14 @@ struct Dut {
     bool sleeping_ = false;
     bool shutting_down_ = false;
     bool write_in_progress_ = false;
+    bool read_in_progress_ = false;
     IoStat stat;
 
     HubPtr hub_;
     boost::asio::deadline_timer timer_;
 
     std::string child_type_;
-    RingBuf<4096> write_buf_;
+    RingBuf<8> write_buf_;
     std::array<char, 32> read_buf_;
 };
 } // namespace TermHub

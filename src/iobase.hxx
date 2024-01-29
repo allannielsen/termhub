@@ -73,7 +73,8 @@ struct IoStat {
 };
 
 struct Iobase {
-    virtual void send_break(){};
+    virtual void send_break() {}
+    virtual void io_wake_up_read() = 0;
     virtual void inject(const char *p, size_t l) = 0;
     virtual ~Iobase() {}
     virtual void start() = 0;
