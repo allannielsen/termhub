@@ -13,44 +13,22 @@
 #include "signal_exit.hxx"
 
 namespace TermHub {
-struct TcpClient : public Dut, std::enable_shared_from_this<TcpClient> {
-    static DutPtr create(boost::asio::io_service &asio, HubPtr h,
-                         std::string host, std::string port);
-
-    ~TcpClient();
-
-    void shutdown();
-
-    void start();
-
-    void reconnect_timeout();
-
-    void handle_reconnect_timeout(const boost::system::error_code &e);
-
-    void connect();
-
-    void handle_read(const boost::system::error_code &error, size_t length);
-
-    void write_start();
-
-    void write_completion(const boost::system::error_code &error,
-                          size_t length);
-
-    void inject(const char *p, size_t l);
-
-    void status_dump(std::stringstream &ss, const now_t &base_time);
-
-  private:
+struct TcpClient : public Dut {
     TcpClient(boost::asio::io_service &asio, HubPtr h, std::string host,
               std::string port);
 
+    ~TcpClient();
+
+    void child_close() override;
+    void child_connect() override;
+    void child_async_read() override;
+    void child_async_write(size_t length, const char *data) override;
+
+    void status_dump(std::stringstream &ss, const now_t &base_time) override;
+
+  private:
     boost::asio::io_service &asio_;
-    boost::asio::deadline_timer timer_;
-    HubPtr hub_;
-    std::array<char, 32> buf_;
-    RingBuf<1024 * 1024 * 4> tx_buf_;
     boost::asio::ip::tcp::socket socket_;
-    bool shutting_down_ = false;
     size_t write_in_progress_ = 0;
     std::string host_, port_;
 };

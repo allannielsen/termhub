@@ -4,6 +4,7 @@
 #include <boost/asio.hpp>
 #include <functional>
 
+#include "dut.hxx"
 #include "iobase.hxx"
 #include "log.hxx"
 #include "ringbuf.hxx"

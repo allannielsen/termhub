@@ -213,38 +213,40 @@ int main(int ac, char *av[]) {
     HubPtr hub = Hub::create();
 
     // try to figure out what device type to use
-    DutPtr dut;
+    std::unique_ptr<Dut> dut;
     if (device.size() == 0) {
         std::cout << "No device specified!" << std::endl;
         exit(-1);
 
     } else if (device == "dummy") {
-        dut = DutDummyEcho::create(hub);
+        dut = std::make_unique<DutDummyEcho>(asio, hub);
         std::cout << "Connected to dummy echo-device\r\n";
 
     } else if (std::find(device.begin(), device.end(), ':') != device.end()) {
         auto x = std::find(device.begin(), device.end(), ':');
         std::string host(device.begin(), x);
         std::string port(x + 1, device.end());
-        dut = TcpClient::create(asio, hub, host, port);
+        dut = std::make_unique<TcpClient>(asio, hub, host, port);
         std::cout << "Connected to " << device << "\r\n";
 
     } else if (std::find(device.begin(), device.end(), '/') != device.end()) {
         std::cout << "Device at " << device << "\r\n";
         std::string path(device.begin(), device.end());
-        dut = Rs232Client::create(asio, hub, path, baudrate);
+        dut = std::make_unique<Rs232Client>(asio, hub, path, baudrate);
 
     } else {
         std::cout << "Device: " << device << " not understood" << std::endl;
         exit(-1);
     }
 
+    signal_exit_reg(std::bind(&Dut::shutdown, dut.get()));
+
     typedef TcpServer<tcp::endpoint, TcpSession> Server;
     TcpServerPtr server_auto;
     if (listen_port_number > 0) {
         try {
             tcp::endpoint ep(boost::asio::ip::tcp::v4(), listen_port_number);
-            server_auto = Server::create(asio, ep, dut, hub);
+            server_auto = Server::create(asio, ep, dut.get(), hub);
             std::cout << "Listening on " << listen_port_number << std::endl;
         } catch (...) {
             std::cout << "Failed to listen on port " << listen_port_number
@@ -257,7 +259,7 @@ int main(int ac, char *av[]) {
         std::cout << "Running in headless mode" << std::endl;
 
     } else {
-        IoPtr tty = Tty::create(asio, hub, dut);
+        IoPtr tty = Tty::create(asio, hub, dut.get());
 
         if (has_config) {
             for (auto &e : conf_db) {
@@ -279,8 +281,8 @@ int main(int ac, char *av[]) {
     std::shared_ptr<UnixSocketServer> cmd_server;
     if (cmd_file.size()) {
         try {
-            cmd_server =
-                UnixSocketServer::create(asio, cmd_file, hub, dut, server_auto);
+            cmd_server = UnixSocketServer::create(asio, cmd_file, hub,
+                                                  dut.get(), server_auto);
             std::cout << "Cmd interface at " << cmd_file << "\r\n";
         } catch (...) {
             std::cout << "Failed to create cmd-interface at: " << cmd_file

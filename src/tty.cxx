@@ -175,8 +175,7 @@ void Tty::start() {
 
 void Tty::handle_read_data(const char *c, size_t s) {
     std::string str(c, s);
-    LOG("tty read ptr:" << (void *)dut_.get()
-                        << " data:" << Fmt::EscapedString(str));
+    LOG("tty read ptr:" << (void *)dut_ << " data:" << Fmt::EscapedString(str));
     stat_rx_inc(s);
     dut_->inject(c, s);
 }

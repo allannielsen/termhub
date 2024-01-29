@@ -51,7 +51,7 @@ std::shared_ptr<Hub> Hub::create() {
 //     // LOG("post done");
 // }
 
-void Hub::post(DutPtr peer, const char *data, size_t l) {
+void Hub::post(Dut *peer, const char *data, size_t l) {
     DisconnectPostpone dis(this);
     auto i = sinks.begin();
 

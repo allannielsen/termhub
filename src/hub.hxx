@@ -11,7 +11,7 @@ struct Dut;
 typedef std::chrono::time_point<std::chrono::system_clock> now_t;
 
 typedef std::shared_ptr<Iobase> IoPtr;
-typedef std::shared_ptr<Dut> DutPtr;
+typedef Dut *DutPtr;
 
 class DisconnectPostpone;
 
@@ -20,7 +20,7 @@ struct Hub {
 
     static std::shared_ptr<Hub> create();
     // void post(IoPtr peer, const char *data, size_t l);
-    void post(DutPtr peer, const char *data, size_t l);
+    void post(Dut *peer, const char *data, size_t l);
 
     void status_dump(std::stringstream &ss, const now_t &now);
     void shutdown();

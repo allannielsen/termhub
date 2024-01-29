@@ -32,6 +32,7 @@ add_library(th
     src/dut.cxx
     src/fmt.cxx
     src/hub.cxx
+    src/dut-dummy-echo.cxx
     src/process.cxx
     src/rs232_client.cxx
     src/signal_exit.cxx
