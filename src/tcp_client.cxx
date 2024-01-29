@@ -16,14 +16,15 @@ void TcpClient::child_close() {
 }
 
 void TcpClient::child_async_read() {
-    auto x = std::bind(&Dut::read_handler, shared_from_this(),
-                       std::placeholders::_1, std::placeholders::_2);
+    auto x = std::bind(&Dut::read_handler, this, std::placeholders::_1,
+                       std::placeholders::_2);
     boost::asio::async_read(
         socket_, boost::asio::buffer(&read_buf_[0], read_buf_.size()),
         boost::asio::transfer_at_least(1), x);
 }
 
-void TcpClient::child_connect() {
+std::string TcpClient::child_connect() {
+    std::string ep;
     using boost::asio::ip::tcp;
 
     tcp::resolver resolver(asio_);
@@ -39,11 +40,16 @@ void TcpClient::child_connect() {
 
     boost::asio::socket_base::keep_alive option(true);
     socket_.set_option(option);
+
+    ep.append(host_);
+    ep.append(":");
+    ep.append(port_);
+    return ep;
 }
 
 void TcpClient::child_async_write(size_t length, const char *data) {
-    auto x = std::bind(&Dut::write_handler, shared_from_this(),
-                       std::placeholders::_1, std::placeholders::_2);
+    auto x = std::bind(&Dut::write_handler, this, std::placeholders::_1,
+                       std::placeholders::_2);
     boost::asio::async_write(socket_, boost::asio::buffer(data, length),
                              boost::asio::transfer_at_least(1), x);
 }

@@ -32,7 +32,7 @@ struct Rs232Client : public Dut {
     void start();
 
     void child_close() override;
-    void child_connect() override;
+    std::string child_connect() override;
     void child_async_read() override;
     void child_async_write(size_t length, const char *data) override;
 

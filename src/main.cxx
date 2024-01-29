@@ -220,17 +220,14 @@ int main(int ac, char *av[]) {
 
     } else if (device == "dummy") {
         dut = std::make_unique<DutDummyEcho>(asio, hub);
-        std::cout << "Connected to dummy echo-device\r\n";
 
     } else if (std::find(device.begin(), device.end(), ':') != device.end()) {
         auto x = std::find(device.begin(), device.end(), ':');
         std::string host(device.begin(), x);
         std::string port(x + 1, device.end());
         dut = std::make_unique<TcpClient>(asio, hub, host, port);
-        std::cout << "Connected to " << device << "\r\n";
 
     } else if (std::find(device.begin(), device.end(), '/') != device.end()) {
-        std::cout << "Device at " << device << "\r\n";
         std::string path(device.begin(), device.end());
         dut = std::make_unique<Rs232Client>(asio, hub, path, baudrate);
 
@@ -238,7 +235,6 @@ int main(int ac, char *av[]) {
         std::cout << "Device: " << device << " not understood" << std::endl;
         exit(-1);
     }
-
     signal_exit_reg(std::bind(&Dut::shutdown, dut.get()));
 
     typedef TcpServer<tcp::endpoint, TcpSession> Server;
@@ -291,6 +287,7 @@ int main(int ac, char *av[]) {
         }
     }
 
+    dut->start();
     asio.run();
 
     return 0;

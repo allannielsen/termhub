@@ -5,16 +5,15 @@
 #include "ringbuf.hxx"
 
 namespace TermHub {
-struct Dut : public std::enable_shared_from_this<Dut> {
+struct Dut {
     virtual void send_break(){};
     void inject(const char *p, size_t l);
     virtual ~Dut() {}
 
     void start();
-
     void shutdown();
     virtual void child_close() = 0;
-    virtual void child_connect() = 0;
+    virtual std::string child_connect() = 0;
     virtual void child_async_read() = 0;
     virtual void child_async_write(size_t length, const char *data) = 0;
 
