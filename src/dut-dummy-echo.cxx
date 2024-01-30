@@ -1,3 +1,4 @@
+#ifdef TERMHUB_FEATURE_DUMMY_DEVICE
 #include "dut-dummy-echo.hxx"
 #include "log.hxx"
 
@@ -136,3 +137,4 @@ void DutDummyEcho::status_dump(std::stringstream &ss, const now_t &base_time) {
 }
 
 } // namespace TermHub
+#endif

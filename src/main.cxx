@@ -1,6 +1,8 @@
 #include "cmd-registry.hxx"
 #include "cmd.hxx"
+#ifdef TERMHUB_FEATURE_DUMMY_DEVICE
 #include "dut-dummy-echo.hxx"
+#endif
 #include "hub.hxx"
 #include "log.hxx"
 #include "rs232_client.hxx"
@@ -147,7 +149,11 @@ int main(int ac, char *av[]) {
         "Baudrate")("headless", "Headless/daemon mode - IO not printed locally "
                                 "(only useful along with -p)")(
         "device,d", po::value<std::string>(&device),
+#ifdef TERMHUB_FEATURE_DUMMY_DEVICE
         "Device - /dev/rs232-device|(ip-address|hostname):port|dummy");
+#else
+        "Device - /dev/rs232-device|(ip-address|hostname):port");
+#endif
 
     po::positional_options_description pos;
     pos.add("device", -1);
@@ -218,8 +224,10 @@ int main(int ac, char *av[]) {
         std::cout << "No device specified!" << std::endl;
         exit(-1);
 
+#ifdef TERMHUB_FEATURE_DUMMY_DEVICE
     } else if (device == "dummy") {
         dut = std::make_unique<DutDummyEcho>(asio, hub);
+#endif
 
     } else if (std::find(device.begin(), device.end(), ':') != device.end()) {
         auto x = std::find(device.begin(), device.end(), ':');

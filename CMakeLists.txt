@@ -11,6 +11,12 @@ SET(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 SET(Boost_USE_STATIC_LIBS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(TERMHUB_FEATURE_DUMMY_DEVICE "Support dummy device (require recent boost version)" ON)
+if(TERMHUB_FEATURE_DUMMY_DEVICE)
+    add_definitions(-DTERMHUB_FEATURE_DUMMY_DEVICE)
+endif()
+
+
 #enable_testing()
 
 find_package(Boost COMPONENTS thread program_options system REQUIRED)
