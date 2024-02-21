@@ -68,7 +68,7 @@ struct IoStat {
         tx_drop.pr(o, "tx-drop", 20, base_time);
         tx_error.pr(o, "tx-error", 20, base_time);
         o << "    tx-pending:     " << tx_pending << "\n";
-        rx.pr(o, "con", 20, base_time);
+        connected.pr(o, "con", 20, base_time);
     }
 };
 
