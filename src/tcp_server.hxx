@@ -129,8 +129,10 @@ class TcpSession : public Iobase,
                                << "): Data ready - but pipeline is full");
             read_pending_ = true;
             hub_->sleep_read(shared_from_this());
+            stat_rx_deferred();
         } else {
             size_t s = socket_.read_some(b, ec);
+            stat_rx_inc(s);
             if (ec) {
                 LOG("tcp-session(" << (void *)this << "): Error (disconnect): "
                                    << error.message());

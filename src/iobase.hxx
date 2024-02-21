@@ -57,13 +57,14 @@ struct StatCnt {
 };
 
 struct IoStat {
-    StatCnt rx;
+    StatCnt rx, rx_def;
     StatCnt tx, tx_drop, tx_error;
     StatCnt connected;
     uint64_t tx_pending = 0;
 
     void pr(std::ostream &o, const now_t &base_time) {
         rx.pr(o, "rx", 20, base_time);
+        rx_def.pr(o, "rx-deffered", 20, base_time);
         tx.pr(o, "tx", 20, base_time);
         tx_drop.pr(o, "tx-drop", 20, base_time);
         tx_error.pr(o, "tx-error", 20, base_time);
@@ -82,6 +83,7 @@ struct Iobase {
     virtual void status_dump(std::stringstream &ss, const now_t &base_time) = 0;
 
     void stat_connected_inc() { stat.connected.inc(1); }
+    void stat_rx_deferred() { stat.rx_def.inc(1); }
     void stat_rx_inc(uint64_t x) { stat.rx.inc(x); }
     void stat_tx_drop_inc(uint64_t x) { stat.tx_drop.inc(x); }
     void stat_tx_request(uint64_t x) { stat.tx_pending = x; }
